@@ -3,17 +3,20 @@ use sdl2::audio::*;
 pub struct Channel {
     phase: u32,
     phase_inc: u32,
+    note: i32,
     pcm_off: usize,
     pcm_len: usize,
+    pcm_speed: u32,
     vol: i16,
 }
 
 impl Channel {
     fn calc_pitch(&mut self, samp_rate: u32) {
-        self.phase_inc = DENOM * 256 * 440 / samp_rate;
+        let note = (2.0_f64).powf((self.note as f64 - 60.0) / 12.0) * 440.0;
+        self.phase_inc = self.pcm_speed * note as u32 / samp_rate;
     }
     fn get_point(&mut self, pcm: &[i8]) -> i16 {
-        let point = pcm[self.phase as usize / DENOM as usize %
+        let point = pcm[self.phase as usize %
                         self.pcm_len + self.pcm_off];
         self.phase = self.phase.wrapping_add(self.phase_inc);
         point as i16 * self.vol
@@ -31,8 +34,6 @@ pub struct Mixer {
     pcm: Vec<i8>,
     chan: Vec<Channel>,
 }
-
-const DENOM: u32 = 1024;
 
 impl Mixer {
     fn tick(&mut self) {
@@ -68,7 +69,18 @@ impl Mixer {
             phase_inc: 0,
             pcm_off: 0,
             pcm_len: 255,
-            vol: 255,
+            pcm_speed: 256,
+            note: 60,
+            vol: 127,
+        });
+        mixer.chan.push(Channel {
+            phase: 0,
+            phase_inc: 0,
+            pcm_off: 0,
+            pcm_len: 255,
+            pcm_speed: 256,
+            note: 72,
+            vol: 127,
         });
         mixer.tick();
         mixer
