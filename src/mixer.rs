@@ -48,12 +48,6 @@ impl Mixer {
         }
         self.next_tick = self.next_tick.wrapping_add(self.tick_len);
     }
-    pub fn set_tickrate(&mut self, tick_rate: u32) {
-        self.tick_rate = tick_rate;
-    }
-    pub fn set_bpm(&mut self, bpm: u32) {
-        self.bpm = bpm;
-    }
     pub fn new(srate: i32) -> Mixer {
         let mut mixer = Mixer {
             srate: srate as u32,
