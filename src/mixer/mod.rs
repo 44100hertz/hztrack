@@ -2,13 +2,15 @@ use sdl2;
 use sdl2::audio::*;
 use std::time::Duration;
 
+mod command;
+
 const PBITS: u32 = 8;
 const PBITSF: f64 = (1<<PBITS) as f64;
 
 pub struct Channel {
     phase: u32,
     phase_inc: u32,
-    note: i32,
+    note: u8,
     pcm_off: usize,
     pcm_len: u32,
     pcm_speed: u32,
@@ -32,8 +34,8 @@ pub struct Mixer {
     srate: u32,
     samp_count: u32,
     next_tick: u32,
-    bpm: u32,
-    tick_rate: u32,
+    bpm: u8,
+    tick_rate: u8,
     tick_len: u32,
     pcm: Vec<i8>,
     chan: Vec<Channel>,
@@ -41,12 +43,13 @@ pub struct Mixer {
 
 impl Mixer {
     fn tick(&mut self) {
-        self.tick_len = self.srate * 60 / self.bpm / self.tick_rate;
+        self.tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
         self.chan[0].note += 1;
         for chan in &mut self.chan {
             chan.calc_pitch(self.srate);
         }
         self.next_tick = self.next_tick.wrapping_add(self.tick_len);
+        command::from_raw("Zff").process(self);
     }
     pub fn new(srate: i32) -> Mixer {
         let mut mixer = Mixer {
