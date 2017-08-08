@@ -6,18 +6,22 @@ pub struct Command {
     data: u8,
 }
 impl Command {
-    pub fn process(&self, m: &mut Mixer) {
+    pub fn execute(&self, m: &mut Mixer) {
         match self.id as char {
-            'N' => m.chan[0].note = self.data,
             '2' => {
                 if self.data < 32 { m.tick_rate = self.data }
                 else { m.bpm = self.data }},
             _ => eprintln!("invalid command!"),
         }
     }
+    pub fn string(&self) -> String {
+        format!("{}{:X}", self.id as char, self.data)
+    }
+    pub fn print(&self) {
+        println!("{}", self.string());
+    }
 }
-
-pub fn from_raw(raw: &str) -> Command {
+pub fn from_str(raw: &str) -> Command {
     let mut iter = raw.chars();
     Command {
         id: base32::from_char(iter.next().unwrap()),

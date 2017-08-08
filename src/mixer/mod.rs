@@ -49,7 +49,9 @@ impl Mixer {
             chan.calc_pitch(self.srate);
         }
         self.next_tick = self.next_tick.wrapping_add(self.tick_len);
-        command::from_raw("Zff").process(self);
+        let c = command::from_str("Zff");
+        c.execute(self);
+        c.print();
     }
     pub fn new(srate: i32) -> Mixer {
         let mut mixer = Mixer {
