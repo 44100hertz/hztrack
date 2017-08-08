@@ -1,3 +1,5 @@
+// 0123456789ABCDEFGHJKLMNPQRTUVWXY
+
 pub fn from_char(c: char) -> u8 {
     let wide: char = match c {
         '0' | 'O' | 'o' => '0',
