@@ -6,8 +6,6 @@ pub fn from_char(c: char) -> u8 {
         'I' | 'l' | 'i' => '1',
         'Z' | 'z' => '2',
         'S' | 's' => '5',
-        'b' => '6',
-        'g' => '9',
         _ => c.to_uppercase().nth(0).unwrap(),
     };
     wide as u8
