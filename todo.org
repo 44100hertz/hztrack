@@ -1,0 +1,29 @@
+* TODO basic program
+** TODO commands
+I want to make some simple set of commands, maybe replicate the protracker set
+of commands. Maybe an interchangeable command format, even? Either way, I just
+need a prototype for it and it's good not to get hung up.
+
+** TODO editor
+*** TODO draw the pattern
+*** TODO keyboard
+*** TODO mouse
+*** TODO sample management
+
+** TODO playback
+*** TODO resampling
+Not sure whether I want to limit sample rates/sizes and use something like a
+blip buffer, or maybe linear interp?
+
+Ideally I'd like to just have settings to emulate each given retro resampler here:
+ - NONE
+ - Blip Buffer
+ - Linear
+ - 4-tap gaussian (snes)
+ - proper
+
+An issue with the snes thing is that it should then have filter parameters. Best
+to defer that imo.
+*** TODO envelopes 
+ADSR? Set of points? Polynomial? There's options here. Protracker is famous and
+doesn't even have 'em, so I'll have to think about what I really want here.
