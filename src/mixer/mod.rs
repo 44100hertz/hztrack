@@ -1,6 +1,7 @@
 use sdl2;
 use sdl2::audio::*;
 use std::time::Duration;
+use display::Display;
 
 mod command;
 
@@ -118,6 +119,7 @@ pub fn run() {
         Mixer::new(spec.freq)
     }).unwrap();
 
+    let disp = Display::new(&sdl);
     device.resume();
     ::std::thread::sleep(Duration::from_millis(20000));
 }
