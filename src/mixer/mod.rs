@@ -44,7 +44,6 @@ pub struct Mixer {
 impl Mixer {
     fn tick(&mut self) {
         self.tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
-        self.chan[0].note += 1;
         for chan in &mut self.chan {
             chan.calc_pitch(self.srate);
         }
