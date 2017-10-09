@@ -1,8 +1,7 @@
 use sdl2;
 use sdl2::audio::*;
 use std::time::Duration;
-use display::Display;
-
+use display;
 mod command;
 
 const PBITS: u32 = 8;
@@ -119,7 +118,7 @@ pub fn run() {
         Mixer::new(spec.freq)
     }).unwrap();
 
-    let disp = Display::new(&sdl);
     device.resume();
+    display::run(sdl);
     ::std::thread::sleep(Duration::from_millis(20000));
 }
