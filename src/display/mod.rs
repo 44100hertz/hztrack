@@ -16,7 +16,16 @@ pub fn run(sdl: sdl2::Sdl) {
     let tex_creator = canvas.texture_creator();
     let font = tex_creator.create_texture_from_surface(
         sdl2::surface::Surface::load_bmp("res/font.bmp").unwrap()).unwrap();
-    loop {
+
+    let mut event_pump = sdl.event_pump().unwrap();
+    'main: loop {
+        use sdl2::event::Event;
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit {..} => break 'main,
+                _ => {}
+            }
+        }
         canvas.set_draw_color(Color{r:0, g:0, b:255, a:255});
         canvas.clear();
         canvas.copy(&font, None, None).unwrap();

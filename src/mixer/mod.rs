@@ -120,5 +120,4 @@ pub fn run() {
 
     device.resume();
     display::run(sdl);
-    ::std::thread::sleep(Duration::from_millis(20000));
 }
