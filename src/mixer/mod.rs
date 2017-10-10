@@ -3,8 +3,6 @@ use std::sync::{Arc, Mutex};
 use sdl2;
 use sdl2::audio::*;
 
-pub mod command;
-
 pub mod control;
 use self::control::*;
 

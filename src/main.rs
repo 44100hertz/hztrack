@@ -7,7 +7,6 @@ mod mixer;
 mod display;
 
 use mixer::control::*;
-use mixer::command::Command;
 
 fn main() {
     let ctrl = {
