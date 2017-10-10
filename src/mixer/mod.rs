@@ -86,20 +86,22 @@ impl Mixer {
         mixer
     }
     fn tick(&mut self) {
-        self.tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
-        for chan in &mut self.chan {
-            chan.calc_pitch(self.srate);
-        }
-        self.next_tick = self.next_tick.wrapping_add(self.tick_len);
-        let mut ctrl = self.ctrl.lock().unwrap();
+        let cc = self.ctrl.clone(); 
+        let mut ctrl = cc.lock().unwrap();
         if let Some(field) = ctrl.sequence.pop_front() {
             if let Some(cmd) = field.cmd {
+                cmd.execute(self);
                 cmd.print();
             }
             if let Some(note) = field.note {
                 self.chan[0].note = note
             }
         }
+        self.tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
+        for chan in &mut self.chan {
+            chan.calc_pitch(self.srate);
+        }
+        self.next_tick = self.next_tick.wrapping_add(self.tick_len);
     }
 }
 

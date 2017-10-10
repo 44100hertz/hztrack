@@ -16,8 +16,10 @@ impl Command {
     pub fn execute(&self, m: &mut Mixer) {
         match self.id as char {
             '2' => {
-                if self.data < 32 { m.tick_rate = self.data }
-                else { m.bpm = self.data }},
+                if self.data < 32 {
+                    m.tick_rate = self.data
+                } else {
+                    m.bpm = self.data }},
             _ => eprintln!("invalid command!"),
         }
     }
