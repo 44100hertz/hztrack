@@ -1,12 +1,16 @@
+use std::sync::{Arc, Mutex};
+
 use sdl2;
 use sdl2::audio::*;
 
 mod command;
+pub mod control;
+use self::control::*;
 
 const PBITS: u32 = 8;
 const PBITSF: f64 = (1<<PBITS) as f64;
 
-pub fn run(sdl: &sdl2::Sdl) -> AudioDevice<Mixer> {
+pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) -> AudioDevice<Mixer> {
     let audio_subsys = sdl.audio().unwrap();
     let desired = AudioSpecDesired {
         freq: Some(48000),
@@ -14,7 +18,7 @@ pub fn run(sdl: &sdl2::Sdl) -> AudioDevice<Mixer> {
         samples: None,
     };
     let device = audio_subsys.open_playback(None, &desired, |spec| {
-        Mixer::new(spec.freq)
+        Mixer::new(spec.freq, ctrl)
     }).unwrap();
     device.resume();
     device
@@ -52,20 +56,11 @@ pub struct Mixer {
     tick_len: u32,
     pcm: Vec<i8>,
     chan: Vec<Channel>,
+    ctrl: Arc<Mutex<Controller>>,
 }
 
 impl Mixer {
-    fn tick(&mut self) {
-        self.tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
-        for chan in &mut self.chan {
-            chan.calc_pitch(self.srate);
-        }
-        self.next_tick = self.next_tick.wrapping_add(self.tick_len);
-        let c = command::from_str("Zff");
-        c.execute(self);
-        c.print();
-    }
-    pub fn new(srate: i32) -> Mixer {
+    pub fn new(srate: i32, ctrl: Arc<Mutex<Controller>>) -> Mixer {
         let mut mixer = Mixer {
             srate: srate as u32,
             samp_count: 0,
@@ -77,6 +72,7 @@ impl Mixer {
             pcm: ::std::iter::repeat(()).take(255).enumerate()
                 .map(|i| ((i.0 as f64 / 128.0 * 3.14159).sin() * 127.0) as i8)
                 .collect(),
+            ctrl: ctrl,
         };
         mixer.chan.push(Channel {
             phase: 0,
@@ -87,16 +83,23 @@ impl Mixer {
             note: 60,
             vol: 127,
         });
-        mixer.chan.push(Channel {
-            phase: 0,
-            phase_inc: 0,
-            pcm_off: 0,
-            pcm_len: 255,
-            pcm_speed: 256,
-            note: 72,
-            vol: 127,
-        });
         mixer
+    }
+    fn tick(&mut self) {
+        self.tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
+        for chan in &mut self.chan {
+            chan.calc_pitch(self.srate);
+        }
+        self.next_tick = self.next_tick.wrapping_add(self.tick_len);
+        let mut ctrl = self.ctrl.lock().unwrap();
+        if let Some(field) = ctrl.sequence.pop_front() {
+            if let Some(cmd) = field.cmd {
+                cmd.print();
+            }
+            if let Some(note) = field.note {
+                self.chan[0].note = note
+            }
+        }
     }
 }
 
