@@ -1,8 +1,14 @@
+use std::sync::{Mutex, Arc};
+use mixer::control::Controller;
+
 extern crate sdl2;
 use sdl2::pixels::Color;
 use sdl2::render::*;
 use sdl2::video::Window;
 use sdl2::rect::*;
+
+const CHAR_W: i32 = 8;
+const CHAR_H: i32 = 8;
 
 pub struct Artist<'tex> {
     canvas: Canvas<Window>,
@@ -19,22 +25,24 @@ impl<'tex> Artist<'tex> {
         self.canvas.present();
     }
     fn write(&mut self, mut x: i32, y: i32, chars: &str) {
-        const CHAR_W: i32 = 8;
-        const CHAR_H: i32 = 8;
         for c in chars.as_bytes() {
             let src = Rect::new(
                 (*c as i32 % 16) * CHAR_W,
                 (*c as i32 / 16) * CHAR_H,
                 CHAR_W as u32,
                 CHAR_H as u32);
-            let dest = Rect::new(x, y, CHAR_W as u32 * self.scale, CHAR_H as u32 * self.scale);
+            let dest = Rect::new(
+                x * self.scale as i32,
+                y * self.scale as i32,
+                CHAR_W as u32 * self.scale,
+                CHAR_H as u32 * self.scale);
             self.canvas.copy(&self.font, Some(src), Some(dest)).unwrap();
-            x += CHAR_W * self.scale as i32;
+            x += CHAR_W;
         }
     }
 }
 
-pub fn run(sdl: &sdl2::Sdl) {
+pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) {
     let video_subsys = sdl.video().unwrap();
     let win = video_subsys.window("rusttracker", 800, 600)
         .position_centered()
@@ -65,11 +73,17 @@ pub fn run(sdl: &sdl2::Sdl) {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} => break 'main,
-                _ => {}
+                _ => {},
             }
         }
+        let mut y = 0;
         artist.clear();
-        artist.write(0, 0, "Hello, world!");
+        for ref field in ctrl.lock().unwrap().sequence.iter() {
+            if let Some(ref cmd) = field.cmd {
+                artist.write(0, y, &cmd.string());
+            }
+            y += CHAR_H;
+        }
         artist.present();
     }
 }

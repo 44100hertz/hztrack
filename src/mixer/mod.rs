@@ -3,7 +3,8 @@ use std::sync::{Arc, Mutex};
 use sdl2;
 use sdl2::audio::*;
 
-mod command;
+pub mod command;
+
 pub mod control;
 use self::control::*;
 
@@ -91,7 +92,6 @@ impl Mixer {
         if let Some(field) = ctrl.sequence.pop_front() {
             if let Some(cmd) = field.cmd {
                 cmd.execute(self);
-                cmd.print();
             }
             if let Some(note) = field.note {
                 self.chan[0].note = note
