@@ -23,6 +23,7 @@ pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) -> AudioDevice<Mixer> 
     device
 }
 
+#[derive(Clone)]
 pub struct Channel {
     phase: u32,
     phase_inc: u32,
@@ -34,6 +35,17 @@ pub struct Channel {
 }
 
 impl Channel {
+    fn new() -> Self {
+        Self {
+            phase: 0,
+            phase_inc: 0,
+            pcm_off: 0,
+            pcm_len: 255,
+            pcm_speed: 256,
+            note: 0,
+            vol: 127,
+        }
+    }
     fn calc_pitch(&mut self, srate: u32) {
         let note = (2.0f64).powf((self.note as f64 - 60.0) / 12.0) * 440.0;
         self.phase_inc = self.pcm_speed * (note * PBITSF) as u32 / srate;
@@ -73,15 +85,7 @@ impl Mixer {
                 .collect(),
             ctrl: ctrl,
         };
-        mixer.chan.push(Channel {
-            phase: 0,
-            phase_inc: 0,
-            pcm_off: 0,
-            pcm_len: 255,
-            pcm_speed: 256,
-            note: 60,
-            vol: 127,
-        });
+        mixer.set_num_channels(1);
         mixer
     }
     fn tick(&mut self) {
@@ -100,6 +104,9 @@ impl Mixer {
             chan.calc_pitch(self.srate);
         }
         self.next_tick = self.next_tick.wrapping_add(self.tick_len);
+    }
+    pub fn set_num_channels(&mut self, num: usize) {
+        self.chan.resize(num, Channel::new());
     }
 }
 
