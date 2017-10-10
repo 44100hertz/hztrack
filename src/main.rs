@@ -5,5 +5,7 @@ mod mixer;
 mod display;
 
 fn main() {
-    mixer::run();
+    let sdl = sdl2::init().unwrap();
+    let mixer = mixer::run(&sdl);
+    display::run(&sdl);
 }

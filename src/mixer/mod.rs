@@ -1,11 +1,24 @@
 use sdl2;
 use sdl2::audio::*;
-use std::time::Duration;
-use display;
+
 mod command;
 
 const PBITS: u32 = 8;
 const PBITSF: f64 = (1<<PBITS) as f64;
+
+pub fn run(sdl: &sdl2::Sdl) -> AudioDevice<Mixer> {
+    let audio_subsys = sdl.audio().unwrap();
+    let desired = AudioSpecDesired {
+        freq: Some(48000),
+        channels: Some(1),
+        samples: None,
+    };
+    let device = audio_subsys.open_playback(None, &desired, |spec| {
+        Mixer::new(spec.freq)
+    }).unwrap();
+    device.resume();
+    device
+}
 
 pub struct Channel {
     phase: u32,
@@ -104,20 +117,4 @@ impl AudioCallback for Mixer {
         }
     }
 
-}
-
-pub fn run() {
-    let sdl = sdl2::init().unwrap();
-    let audio_subsys = sdl.audio().unwrap();
-    let desired = AudioSpecDesired {
-        freq: Some(48000),
-        channels: Some(1),
-        samples: None,
-    };
-    let device = audio_subsys.open_playback(None, &desired, |spec| {
-        Mixer::new(spec.freq)
-    }).unwrap();
-
-    device.resume();
-    display::run(sdl);
 }

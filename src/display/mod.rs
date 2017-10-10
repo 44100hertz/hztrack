@@ -1,6 +1,5 @@
 extern crate sdl2;
 use sdl2::pixels::Color;
-
 use sdl2::render::*;
 use sdl2::video::Window;
 use sdl2::rect::*;
@@ -35,14 +34,14 @@ impl<'tex> Artist<'tex> {
     }
 }
 
-pub fn run(sdl: sdl2::Sdl) {
+pub fn run(sdl: &sdl2::Sdl) {
     let video_subsys = sdl.video().unwrap();
     let win = video_subsys.window("rusttracker", 800, 600)
         .position_centered()
         .opengl()
         .resizable()
         .build().unwrap();
-    let mut canvas = win.into_canvas()
+    let canvas = win.into_canvas()
         .accelerated()
         .present_vsync()
         .target_texture()
