@@ -15,6 +15,9 @@ impl Controller {
     pub fn new() -> Controller {
         Controller { sequence: VecDeque::new() }
     }
+    pub fn next(&mut self) -> Option<Field> {
+        self.sequence.pop_front()
+    }
 }
 
 pub struct Command {
@@ -24,10 +27,10 @@ pub struct Command {
 
 impl Command {
     pub fn from_str(raw: &str) -> Command {
-        let mut iter = raw.chars();
+        let mut chars = raw.chars();
         Command {
-            id: base32::from_char(iter.next().unwrap()),
-            data: u8::from_str_radix(iter.as_str(), 16).unwrap(),
+            id: base32::from_char(chars.next().unwrap()),
+            data: u8::from_str_radix(chars.as_str(), 16).unwrap(),
         }
     }
     pub fn execute(&self, m: &mut Mixer) {

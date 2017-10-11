@@ -91,7 +91,7 @@ impl Mixer {
     fn tick(&mut self) {
         let cc = self.ctrl.clone(); 
         let mut ctrl = cc.lock().unwrap();
-        if let Some(field) = ctrl.sequence.pop_front() {
+        if let Some(field) = ctrl.next() {
             if let Some(cmd) = field.cmd {
                 cmd.execute(self);
             }
