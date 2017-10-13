@@ -60,12 +60,11 @@ impl Channel {
 }
 
 pub struct Mixer {
-    srate: u32,
-    samp_count: u32,
-    next_tick: u32,
+    srate: u32,         // sampling rate
+    samp_count: u32,    // sample count; used for ticking
+    next_tick: u32,     // will tick again when sample count reaches this
     bpm: u8,
-    tick_rate: u8,
-    tick_len: u32,
+    tick_rate: u8,      // number of ticks per beat
     pcm: Vec<i8>,
     chan: Vec<Channel>,
     ctrl: Arc<Mutex<Controller>>,
@@ -79,7 +78,6 @@ impl Mixer {
             next_tick: 0,
             bpm: 120,
             tick_rate: 6,
-            tick_len: 0,
             chan: Vec::new(),
             ctrl: ctrl,
             pcm: (0..255)
@@ -101,11 +99,11 @@ impl Mixer {
                 self.chan[0].note = note
             }
         }
-        self.tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
+        let tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
         for chan in &mut self.chan {
             chan.calc_pitch(self.srate);
         }
-        self.next_tick = self.next_tick.wrapping_add(self.tick_len);
+        self.next_tick = self.next_tick.wrapping_add(tick_len);
     }
     pub fn set_num_channels(&mut self, num: usize) {
         self.chan.resize(num, Channel::new());
