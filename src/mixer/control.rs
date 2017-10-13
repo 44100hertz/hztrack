@@ -36,15 +36,15 @@ pub struct Controller {
 
 impl Controller {
     pub fn new(seq: Vec<Field>) -> Controller {
+        let pos = seq.len() - 1;
         Controller {
             sequence: seq,
-            pos: 0,
+            pos: pos,
         }
     }
     pub fn next(&mut self) -> Field {
-        let ret = self.sequence[self.pos].clone();
         self.pos = (self.pos + 1) % self.sequence.len();
-        ret
+        self.sequence[self.pos].clone()
     }
     pub fn pos(&self) -> usize { self.pos }
 }
