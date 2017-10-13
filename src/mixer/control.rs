@@ -1,25 +1,32 @@
 use base32;
 use mixer::Mixer;
-use std::collections::VecDeque;
 
+#[derive(Clone)]
 pub struct Field {
     pub cmd: Option<Command>,
     pub note: Option<u8>,
 }
 
 pub struct Controller {
-    pub sequence: VecDeque<Field>,
+    pub sequence: Vec<Field>,
+    pos: usize,
 }
 
 impl Controller {
-    pub fn new() -> Controller {
-        Controller { sequence: VecDeque::new() }
+    pub fn new(seq: Vec<Field>) -> Controller {
+        Controller {
+            sequence: seq,
+            pos: 0,
+        }
     }
-    pub fn next(&mut self) -> Option<Field> {
-        self.sequence.pop_front()
+    pub fn next(&mut self) -> Field {
+        let ret = self.sequence[self.pos % self.sequence.len()].clone();
+        self.pos += 1;
+        ret
     }
 }
 
+#[derive(Clone)]
 pub struct Command {
     id: u8,
     data: u8,

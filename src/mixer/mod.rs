@@ -91,13 +91,12 @@ impl Mixer {
     fn tick(&mut self) {
         let cc = self.ctrl.clone(); 
         let mut ctrl = cc.lock().unwrap();
-        if let Some(field) = ctrl.next() {
-            if let Some(cmd) = field.cmd {
-                cmd.execute(self);
-            }
-            if let Some(note) = field.note {
-                self.chan[0].note = note
-            }
+        let field = ctrl.next();
+        if let Some(cmd) = field.cmd {
+            cmd.execute(self);
+        }
+        if let Some(note) = field.note {
+            self.chan[0].note = note
         }
         self.tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
         for chan in &mut self.chan {
