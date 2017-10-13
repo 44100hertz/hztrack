@@ -80,10 +80,10 @@ impl Mixer {
             tick_rate: 6,
             tick_len: 0,
             chan: Vec::new(),
-            pcm: ::std::iter::repeat(()).take(255).enumerate()
-                .map(|i| ((i.0 as f64 / 128.0 * 3.14159).sin() * 127.0) as i8)
-                .collect(),
             ctrl: ctrl,
+            pcm: (0..255)
+                .map(|i| ((i as f64 / 128.0 * 3.1415).sin() * 127.0) as i8)
+                .collect()
         };
         mixer.set_num_channels(1);
         mixer
