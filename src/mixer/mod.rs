@@ -6,9 +6,10 @@ use sdl2::audio::*;
 pub mod control;
 use self::control::*;
 
-const PBITS: u32 = 8;
+const PBITS: u32 = 8; // Bits of fixed-point precision for phase.
 const PBITSF: f64 = (1<<PBITS) as f64;
 
+// hack: must use the returned audiodevice for scope reasons.
 pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) -> AudioDevice<Mixer> {
     let audio_subsys = sdl.audio().unwrap();
     let desired = AudioSpecDesired {
@@ -23,7 +24,7 @@ pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) -> AudioDevice<Mixer> 
     device
 }
 
-#[derive(Clone)]
+#[derive(Clone)] // Cloned ONLY when making new channels; not as a borrowing hack
 pub struct Channel {
     phase: u32,
     phase_inc: u32,
@@ -89,14 +90,16 @@ impl Mixer {
         mixer
     }
     fn tick(&mut self) {
-        let cc = self.ctrl.clone(); 
-        let mut ctrl = cc.lock().unwrap();
-        let field = ctrl.next();
-        if let Some(cmd) = field.cmd {
-            cmd.execute(self);
-        }
-        if let Some(note) = field.note {
-            self.chan[0].note = note
+        {
+            let cc = self.ctrl.clone();
+            let mut ctrl = cc.lock().unwrap();
+            let field = ctrl.next();
+            if let Some(cmd) = field.cmd {
+                cmd.execute(self);
+            }
+            if let Some(note) = field.note {
+                self.chan[0].note = note
+            }
         }
         self.tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
         for chan in &mut self.chan {
