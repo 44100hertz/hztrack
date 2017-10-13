@@ -22,7 +22,7 @@ impl Field {
         }
         match self.cmd {
             Some(ref cmd) => out.push_str(
-                &format!("{}{:X}", cmd.id as char, cmd.data)),
+                &format!("{}{:02X}", cmd.id as char, cmd.data)),
             None => out.push_str("   "),
         }
         out

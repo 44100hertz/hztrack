@@ -9,9 +9,9 @@ mod display;
 use mixer::control::*;
 
 fn main() {
-    let seq: Vec<_> = (0..9)
+    let seq: Vec<_> = (0..8)
         .map(|i| Field{
-            cmd: if i < 2 {Some(Command::from_str("2ff"))} else {None},
+            cmd: if i < 2 {Some(Command::from_str("201"))} else {None},
             note: if i % 2 == 0 {Some(i+60 as u8)} else {None},
         }).collect();
     let ctrl = Arc::new(Mutex::new(Controller::new(seq)));
