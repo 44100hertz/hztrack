@@ -9,10 +9,10 @@ mod display;
 use mixer::control::*;
 
 fn main() {
-    let seq: Vec<_> = (1..10)
+    let seq: Vec<_> = (0..9)
         .map(|i| Field{
-            cmd: Some(Command::from_str("2ff")),
-            note: Some(i as u8),
+            cmd: if i < 2 {Some(Command::from_str("2ff"))} else {None},
+            note: if i % 2 == 0 {Some(i+60 as u8)} else {None},
         }).collect();
     let ctrl = Arc::new(Mutex::new(Controller::new(seq)));
     let sdl = sdl2::init().unwrap();

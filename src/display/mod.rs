@@ -79,9 +79,7 @@ pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) {
         let mut y = 0;
         artist.clear();
         for ref field in ctrl.lock().unwrap().sequence.iter() {
-            if let Some(ref cmd) = field.cmd {
-                artist.write(0, y, &cmd.string());
-            }
+            artist.write(0, y, &field.string());
             y += CHAR_H;
         }
         artist.present();

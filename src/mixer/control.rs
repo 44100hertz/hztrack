@@ -7,6 +7,28 @@ pub struct Field {
     pub note: Option<u8>,
 }
 
+impl Field {
+    pub fn string(&self) -> String {
+        let mut out = String::new();
+        match self.note {
+            Some(ref note) => {
+                const NOTE_NAME: &'static str = "C-C#D-D#E-F-F#G-G#A-A#B-";
+                let name = *note as usize % 12;
+                out.push_str(&NOTE_NAME[name*2..name*2+2]);
+                let octave = note / 12;
+                out.push_str(&format!("{}", octave));
+            }
+            None => out.push_str("   "),
+        }
+        match self.cmd {
+            Some(ref cmd) => out.push_str(
+                &format!("{}{:X}", cmd.id as char, cmd.data)),
+            None => out.push_str("   "),
+        }
+        out
+    }
+}
+
 pub struct Controller {
     pub sequence: Vec<Field>,
     pos: usize,
@@ -49,12 +71,5 @@ impl Command {
                     m.bpm = self.data }},
             _ => eprintln!("invalid command!"),
         }
-    }
-    pub fn string(&self) -> String {
-        format!("{}{:X}", self.id as char, self.data)
-    }
-    #[allow(dead_code)]
-    pub fn print(&self) {
-        println!("{}", self.string());
     }
 }
