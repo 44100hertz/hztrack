@@ -99,10 +99,10 @@ impl Mixer {
                 self.chan[0].note = note
             }
         }
-        let tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
         for chan in &mut self.chan {
             chan.calc_pitch(self.srate);
         }
+        let tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
         self.next_tick = self.next_tick.wrapping_add(tick_len);
     }
     pub fn set_num_channels(&mut self, num: usize) {
