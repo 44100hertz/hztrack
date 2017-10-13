@@ -40,6 +40,13 @@ impl<'tex> Artist<'tex> {
             x += CHAR_W;
         }
     }
+    fn playback_line(&mut self, pos: usize) {
+        self.canvas.set_draw_color(Color::RGB(255, 255, 255));
+        self.canvas.draw_rect(
+            Rect::new(0, pos as i32*CHAR_H * self.scale as i32,
+                      12345678, CHAR_H as u32 * self.scale as u32))
+            .unwrap();
+    }
 }
 
 pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) {
@@ -78,9 +85,13 @@ pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) {
         }
         let mut y = 0;
         artist.clear();
-        for ref field in ctrl.lock().unwrap().sequence.iter() {
-            artist.write(0, y, &field.string());
-            y += CHAR_H;
+        {
+            let c = ctrl.lock().unwrap();
+            for ref field in c.sequence.iter() {
+                artist.write(0, y, &field.string());
+                y += CHAR_H;
+            }
+            artist.playback_line(c.pos());
         }
         artist.present();
     }

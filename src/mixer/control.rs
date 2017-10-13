@@ -42,10 +42,11 @@ impl Controller {
         }
     }
     pub fn next(&mut self) -> Field {
-        let ret = self.sequence[self.pos % self.sequence.len()].clone();
-        self.pos += 1;
+        let ret = self.sequence[self.pos].clone();
+        self.pos = (self.pos + 1) % self.sequence.len();
         ret
     }
+    pub fn pos(&self) -> usize { self.pos }
 }
 
 #[derive(Clone)]
