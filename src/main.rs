@@ -4,7 +4,7 @@ use std::sync::{Mutex, Arc};
 
 mod base32;
 mod mixer;
-mod display;
+mod ui;
 
 use mixer::control::*;
 
@@ -17,5 +17,5 @@ fn main() {
     let ctrl = Arc::new(Mutex::new(Controller::new(seq)));
     let sdl = sdl2::init().unwrap();
     let mixer = mixer::run(&sdl, ctrl.clone());
-    display::run(&sdl, ctrl.clone());
+    ui::run(&sdl, ctrl.clone());
 }
