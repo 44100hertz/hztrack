@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use base32;
 use mixer::Mixer;
 
@@ -43,13 +44,14 @@ pub struct Controller {
     pub play: bool,
 }
 impl Controller {
-    pub fn new(seq: Vec<Field>) -> Controller {
+    pub fn new(seq: Vec<Field>) -> Arc<Mutex<Controller>> {
         let pos = 0;
-        Controller {
+        let ctrl = Controller {
             play: false,
             sequence: seq,
             pos: pos,
-        }
+        };
+        Arc::new(Mutex::new(ctrl))
     }
     pub fn next(&mut self) -> Field {
         if self.play {
