@@ -11,7 +11,7 @@ use mixer::control::*;
 fn main() {
     let seq: Vec<_> = (0..8)
         .map(|i| Field{
-            cmd: if i < 2 {Some(Command::from_str("201"))} else {None},
+            cmd: if i==0 {Some(Command::from_str("281"))} else {None},
             note: if i % 2 == 0 {
                 Note::On(i+60 as u8)
             } else {
