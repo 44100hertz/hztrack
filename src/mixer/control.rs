@@ -47,6 +47,9 @@ impl Controller {
         self.sequence[self.pos].clone()
     }
     pub fn pos(&self) -> usize { self.pos }
+    pub fn set_note(&mut self, note: Option<u8>) {
+        self.sequence[self.pos].note = note;
+    }
 }
 
 #[derive(Clone)]
