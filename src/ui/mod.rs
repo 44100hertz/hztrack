@@ -85,7 +85,9 @@ pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) {
             match event {
                 Event::Quit{..}  => break 'main,
                 Event::KeyDown{scancode, ..} => {
-                    keyboard.handle_key(scancode.unwrap(), ctrl.clone());
+                    keyboard.handle_key(
+                        scancode.unwrap(),
+                        ctrl.lock().unwrap());
                 },
                 _ => {},
             }

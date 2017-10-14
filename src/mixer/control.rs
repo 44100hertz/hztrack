@@ -2,23 +2,31 @@ use base32;
 use mixer::Mixer;
 
 #[derive(Clone)]
+pub enum Note {
+    On(u8),
+    Off,
+    Hold,
+}
+
+#[derive(Clone)]
 pub struct Field {
     pub cmd: Option<Command>,
-    pub note: Option<u8>,
+    pub note: Note,
 }
 
 impl Field {
     pub fn string(&self) -> String {
         let mut out = String::new();
         match self.note {
-            Some(ref note) => {
+            Note::On(ref note) => {
                 const NOTE_NAME: &'static str = "C-C#D-D#E-F-F#G-G#A-A#B-";
                 let name = *note as usize % 12;
                 out.push_str(&NOTE_NAME[name*2..name*2+2]);
                 let octave = note / 12;
                 out.push_str(&format!("{}", octave));
-            }
-            None => out.push_str("   "),
+            },
+            Note::Off => out.push_str("---"),
+            Note::Hold => out.push_str("   "),
         }
         match self.cmd {
             Some(ref cmd) => out.push_str(
@@ -32,23 +40,34 @@ impl Field {
 pub struct Controller {
     pub sequence: Vec<Field>,
     pos: usize,
+    pub play: bool,
 }
-
 impl Controller {
     pub fn new(seq: Vec<Field>) -> Controller {
-        let pos = seq.len() - 1;
+        let pos = 0;
         Controller {
+            play: false,
             sequence: seq,
             pos: pos,
         }
     }
     pub fn next(&mut self) -> Field {
-        self.pos = (self.pos + 1) % self.sequence.len();
+        if self.play {
+            self.scroll(1);
+        }
         self.sequence[self.pos].clone()
     }
     pub fn pos(&self) -> usize { self.pos }
-    pub fn set_note(&mut self, note: Option<u8>) {
+    pub fn set_note(&mut self, note: Note) {
         self.sequence[self.pos].note = note;
+    }
+    pub fn scroll(&mut self, amt: i64) {
+        let pos = self.pos as i64 + amt;
+        self.pos = if pos < 0 {
+            self.sequence.len() - 1
+        } else {
+            pos as usize % self.sequence.len()
+        }
     }
 }
 

@@ -95,7 +95,15 @@ impl Mixer {
             if let Some(cmd) = field.cmd {
                 cmd.execute(self);
             }
-            if let Some(note) = field.note {
+            match field.note {
+                Note::On(note) => {
+                    self.chan[0].note = note;
+                    self.chan[0].vol = 127;
+                },
+                Note::Off => self.chan[0].vol = 0,
+                Note::Hold => {}
+            }
+            if let Note::On(note) = field.note {
                 self.chan[0].note = note
             }
         }
