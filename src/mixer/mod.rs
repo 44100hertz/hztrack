@@ -24,7 +24,7 @@ pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) -> AudioDevice<Mixer> 
     device
 }
 
-#[derive(Clone)] // Cloned ONLY when making new channels; not as a borrowing hack
+#[derive(Clone)]
 pub struct Channel {
     phase: u32,
     phase_inc: u32,

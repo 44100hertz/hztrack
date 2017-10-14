@@ -69,6 +69,16 @@ impl Controller {
             pos as usize % self.sequence.len()
         }
     }
+    pub fn insert(&mut self) {
+        self.sequence.insert(self.pos+1, Field{note: Note::Hold, cmd: None});
+        self.pos += 1;
+    }
+    pub fn remove(&mut self) {
+        if self.sequence.len() > 1 {
+            self.sequence.remove(self.pos);
+            self.pos = if self.pos == 0 {0} else {self.pos - 1}
+        }
+    }
 }
 
 #[derive(Clone)]

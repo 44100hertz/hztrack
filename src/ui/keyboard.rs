@@ -60,13 +60,17 @@ impl Keyboard {
             Scancode::Num0 => note(27, ctrl),
             Scancode::P => note(28, ctrl),
 
-            Scancode::Num1 => ctrl.set_note(Note::Off),
+            Scancode::Num1  => ctrl.set_note(Note::Off),
+            Scancode::Grave => ctrl.set_note(Note::Hold),
 
-            Scancode::PageUp => self.octave_up(),
-            Scancode::PageDown => self.octave_down(),
+            Scancode::PageUp    => self.octave_up(),
+            Scancode::PageDown  => self.octave_down(),
 
             Scancode::Up    => ctrl.scroll(-1),
             Scancode::Down  => ctrl.scroll(1),
+
+            Scancode::Insert => ctrl.insert(),
+            Scancode::Delete => ctrl.remove(),
 
             Scancode::Space => ctrl.play = !ctrl.play,
 

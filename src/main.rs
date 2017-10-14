@@ -9,15 +9,9 @@ mod ui;
 use mixer::control::*;
 
 fn main() {
-    let seq: Vec<_> = (0..8)
-        .map(|i| Field{
-            cmd: if i==0 {Some(Command::from_str("281"))} else {None},
-            note: if i % 2 == 0 {
-                Note::On(i+60 as u8)
-            } else {
-                Note::Hold
-            },
-        }).collect();
+    let seq = vec![Field{
+        note: Note::Hold,
+        cmd: Some(Command::from_str("z06"))}];
     let ctrl = Arc::new(Mutex::new(Controller::new(seq)));
     let sdl = sdl2::init().unwrap();
     let mixer = mixer::run(&sdl, ctrl.clone());

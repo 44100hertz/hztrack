@@ -74,7 +74,7 @@ pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) {
     let mut artist = Artist{
         canvas: canvas,
         font: font,
-        scale: 3,
+        scale: 6,
     };
 
     let mut event_pump = sdl.event_pump().unwrap();
