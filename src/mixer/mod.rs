@@ -44,7 +44,7 @@ impl Channel {
             pcm_len: 255,
             pcm_speed: 256,
             note: 0,
-            vol: 127,
+            vol: 0,
         }
     }
     fn calc_pitch(&mut self, srate: u32) {
