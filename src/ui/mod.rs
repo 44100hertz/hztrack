@@ -21,7 +21,7 @@ pub struct Artist<'tex> {
 
 impl<'tex> Artist<'tex> {
     fn clear(&mut self) {
-        self.canvas.set_draw_color(Color{r:0, g:0, b:255, a:255});
+        self.canvas.set_draw_color(Color{r:0, g:64, b:128, a:255});
         self.canvas.clear();
     }
     fn present(&mut self) {
@@ -43,11 +43,28 @@ impl<'tex> Artist<'tex> {
             x += CHAR_W;
         }
     }
-    fn playback_line(&mut self, pos: usize) {
+    fn playback_line(&mut self, pos: i32) {
         self.canvas.set_draw_color(Color::RGB(255, 255, 255));
-        self.canvas.draw_rect(
-            Rect::new(0, pos as i32*CHAR_H * self.scale as i32,
-                      12345678, CHAR_H as u32 * self.scale as u32))
+        self.canvas.draw_rect(Rect::new(
+                0, pos * CHAR_H * self.scale as i32,
+                12345678, CHAR_H as u32 * self.scale as u32))
+            .unwrap();
+    }
+    fn cursor(&mut self, x: i32, y: i32, w: u32, h: u32) {
+        self.canvas.set_draw_color(Color::RGB(128, 0, 0));
+        self.canvas.fill_rect(Rect::new(
+                x * CHAR_W * self.scale as i32 - 1,
+                y * CHAR_H * self.scale as i32 - 1,
+                w * CHAR_W as u32 * self.scale + 2,
+                h * CHAR_H as u32 * self.scale + 2))
+            .unwrap();
+    }
+    fn bg(&mut self, x: u32, y: u32) {
+        self.canvas.set_draw_color(Color::RGB(0, 0, 0));
+        self.canvas.fill_rect(Rect::new(
+                0, 0,
+                x as u32 * CHAR_W as u32 * self.scale,
+                y as u32 * CHAR_H as u32 * self.scale))
             .unwrap();
     }
 }
@@ -66,10 +83,12 @@ pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) {
         .build().unwrap();
     let tex_creator = canvas.texture_creator();
 
-    use sdl2::surface::Surface;
-    let font = tex_creator.create_texture_from_surface(
-        Surface::load_bmp("res/font.bmp").unwrap())
-        .unwrap();
+    let font = {
+        use sdl2::surface::Surface;
+        let mut surf = Surface::load_bmp("res/font.bmp").unwrap();
+        surf.set_color_key(true, Color::RGB(0, 0, 0)).unwrap();
+        tex_creator.create_texture_from_surface(surf).unwrap()
+    };
 
     let mut artist = Artist{
         canvas: canvas,
@@ -96,11 +115,13 @@ pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) {
         artist.clear();
         {
             let c = ctrl.lock().unwrap();
+            artist.bg(6, c.sequence.len() as u32);
+            artist.cursor(0, c.pos() as i32, 3, 1);
             for ref field in c.sequence.iter() {
                 artist.write(0, y, &field.string());
                 y += CHAR_H;
             }
-            artist.playback_line(c.pos());
+            artist.playback_line(c.pos() as i32);
         }
         artist.present();
     }
