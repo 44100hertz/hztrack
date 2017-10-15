@@ -2,6 +2,18 @@ use std::sync::{Arc, Mutex};
 use base32;
 use mixer::Mixer;
 
+pub struct Controller {
+    pub sequence: Vec<Field>,
+    row: usize,
+    pub play: bool,
+}
+
+#[derive(Clone)]
+pub struct Field {
+    pub note: Note,
+    pub cmd: Option<Command>,
+}
+
 #[derive(Clone)]
 pub enum Note {
     On(u8),
@@ -9,10 +21,43 @@ pub enum Note {
     Hold,
 }
 
-#[derive(Clone)]
-pub struct Field {
-    pub cmd: Option<Command>,
-    pub note: Note,
+impl Controller {
+    pub fn new(seq: Vec<Field>) -> Arc<Mutex<Controller>> {
+        let ctrl = Controller {
+            play: false,
+            sequence: seq,
+            row: 0,
+        };
+        Arc::new(Mutex::new(ctrl))
+    }
+    pub fn next(&mut self) -> Field {
+        if self.play {
+            self.scroll(1);
+        }
+        self.sequence[self.row].clone()
+    }
+    pub fn row(&self) -> usize { self.row }
+    pub fn set_note(&mut self, note: Note) {
+        self.sequence[self.row].note = note;
+    }
+    pub fn scroll(&mut self, amt: i64) {
+        let row = self.row as i64 + amt;
+        self.row = if row < 0 {
+            self.sequence.len() - 1
+        } else {
+            row as usize % self.sequence.len()
+        }
+    }
+    pub fn insert(&mut self) {
+        self.sequence.insert(self.row+1, Field{note: Note::Hold, cmd: None});
+        self.row += 1;
+    }
+    pub fn remove(&mut self) {
+        if self.sequence.len() > 1 {
+            self.sequence.remove(self.row);
+            self.row = if self.row == 0 {0} else {self.row - 1}
+        }
+    }
 }
 
 impl Field {
@@ -35,51 +80,6 @@ impl Field {
             None => out.push_str("   "),
         }
         out
-    }
-}
-
-pub struct Controller {
-    pub sequence: Vec<Field>,
-    pos: usize,
-    pub play: bool,
-}
-impl Controller {
-    pub fn new(seq: Vec<Field>) -> Arc<Mutex<Controller>> {
-        let pos = 0;
-        let ctrl = Controller {
-            play: false,
-            sequence: seq,
-            pos: pos,
-        };
-        Arc::new(Mutex::new(ctrl))
-    }
-    pub fn next(&mut self) -> Field {
-        if self.play {
-            self.scroll(1);
-        }
-        self.sequence[self.pos].clone()
-    }
-    pub fn pos(&self) -> usize { self.pos }
-    pub fn set_note(&mut self, note: Note) {
-        self.sequence[self.pos].note = note;
-    }
-    pub fn scroll(&mut self, amt: i64) {
-        let pos = self.pos as i64 + amt;
-        self.pos = if pos < 0 {
-            self.sequence.len() - 1
-        } else {
-            pos as usize % self.sequence.len()
-        }
-    }
-    pub fn insert(&mut self) {
-        self.sequence.insert(self.pos+1, Field{note: Note::Hold, cmd: None});
-        self.pos += 1;
-    }
-    pub fn remove(&mut self) {
-        if self.sequence.len() > 1 {
-            self.sequence.remove(self.pos);
-            self.pos = if self.pos == 0 {0} else {self.pos - 1}
-        }
     }
 }
 
