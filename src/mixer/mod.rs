@@ -55,12 +55,12 @@ impl Channel {
         self.phase_inc = self.pcm_speed * (note * PBITSF) as u32 / srate;
     }
     fn set_whole_note(&mut self, note: i16) {
-        self.note = (note>>8) as u8; 
+        self.note = (note>>8) as u8;
         self.tune = (note & ((1<<8) - 1)) as i8;
     }
     fn get_point(&mut self, pcm: &[i8]) -> i16 {
         self.phase = self.phase % (self.pcm_len<<PBITS);
-        let point = pcm[(self.phase>>PBITS) as usize + self.pcm_off];
+        let point = pcm[(self.phase>>PBITS) as usize];
         self.phase = self.phase.wrapping_add(self.phase_inc);
         point as i16 * self.vol
     }
@@ -91,7 +91,7 @@ impl Mixer {
                 .map(|i| ((i as f64 / 128.0 * 3.1415).sin() * 127.0) as i8)
                 .collect()
         };
-        mixer.set_num_channels(1);
+        mixer.set_num_channels(1024);
         mixer
     }
     fn tick(&mut self) {
@@ -133,8 +133,10 @@ impl AudioCallback for Mixer {
             *v = {
                 let mut total: i16 = 0;
                 for chan in &mut self.chan {
-                    total = total.saturating_add(
-                        chan.get_point(&self.pcm[..]));
+                    let pcm_from = chan.pcm_off as usize;
+                    let pcm_to = pcm_from + chan.pcm_len as usize;
+                    let pcm = &self.pcm[pcm_from..pcm_to];
+                    total = total.saturating_add(chan.get_point(pcm));
                 }
                 total
             };
