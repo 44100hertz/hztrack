@@ -27,8 +27,7 @@ pub fn run<C: Controller + Send>(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<C>>) -> AudioD
 pub struct Channel {
     phase: u32,
     phase_inc: u32,
-    note: u8,
-    tune: i8,
+    note: u16,
     pcm_off: usize,
     pcm_len: u32,
     pcm_speed: u32,
@@ -44,18 +43,16 @@ impl Channel {
             pcm_len: 255,
             pcm_speed: 256,
             note: 0,
-            tune: 0,
             vol: 0,
         }
     }
     fn calc_pitch(&mut self, srate: u32) {
-        let fine_note = self.note as f64 + self.tune as f64/2f64.powi(8);
+        let fine_note = self.note as f64 / 2f64.powi(8);
         let note = (2.0f64).powf((fine_note - 60.0) / 12.0) * 440.0;
         self.phase_inc = self.pcm_speed * (note * PBITSF) as u32 / srate;
     }
-    fn set_whole_note(&mut self, note: i16) {
-        self.note = (note>>8) as u8;
-        self.tune = (note & ((1<<8) - 1)) as i8;
+    fn set_note(&mut self, note: u8) {
+        self.note = (note as u16)<<8;
     }
     fn get_point(&mut self, pcm: &[i8]) -> i16 {
         self.phase = self.phase % (self.pcm_len<<PBITS);
@@ -104,14 +101,11 @@ impl<C: Controller> Mixer<C> {
                 }
                 match field.note {
                     Note::On(note) => {
-                        self.chan[i].note = note;
                         self.chan[i].vol = 127;
+                        self.chan[i].set_note(note);
                     },
                     Note::Off => self.chan[i].vol = 0,
                     Note::Hold => {}
-                }
-                if let Note::On(note) = field.note {
-                    self.chan[i].note = note
                 }
             }
         }
