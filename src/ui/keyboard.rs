@@ -66,8 +66,10 @@ impl Keyboard {
             Scancode::PageUp    => self.octave_up(),
             Scancode::PageDown  => self.octave_down(),
 
-            Scancode::Up    => ctrl.scroll(-1),
-            Scancode::Down  => ctrl.scroll(1),
+            Scancode::Up    => ctrl.move_cursor(0, -1),
+            Scancode::Down  => ctrl.move_cursor(0, 1),
+            Scancode::Left  => ctrl.move_cursor(-1, 0),
+            Scancode::Right => ctrl.move_cursor(1, 0),
 
             Scancode::Insert => ctrl.insert(),
             Scancode::Delete => ctrl.remove(),

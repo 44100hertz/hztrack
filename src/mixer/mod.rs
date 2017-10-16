@@ -91,27 +91,29 @@ impl Mixer {
                 .map(|i| ((i as f64 / 128.0 * 3.1415).sin() * 127.0) as i8)
                 .collect()
         };
-        mixer.set_num_channels(1024);
         mixer
     }
     fn tick(&mut self) {
         {
             let cc = self.ctrl.clone();
             let mut ctrl = cc.lock().unwrap();
-            let field = ctrl.next();
-            if let Some(cmd) = field.cmd {
-                cmd.execute(self);
-            }
-            match field.note {
-                Note::On(note) => {
-                    self.chan[0].note = note;
-                    self.chan[0].vol = 127;
-                },
-                Note::Off => self.chan[0].vol = 0,
-                Note::Hold => {}
-            }
-            if let Note::On(note) = field.note {
-                self.chan[0].note = note
+            let next = ctrl.next();
+            self.chan.resize(next.len(), Channel::new());
+            for (i, field) in next.iter().enumerate() {
+                if let Some(ref cmd) = field.cmd {
+                    cmd.execute(self);
+                }
+                match field.note {
+                    Note::On(note) => {
+                        self.chan[i].note = note;
+                        self.chan[i].vol = 127;
+                    },
+                    Note::Off => self.chan[i].vol = 0,
+                    Note::Hold => {}
+                }
+                if let Note::On(note) = field.note {
+                    self.chan[i].note = note
+                }
             }
         }
         for chan in &mut self.chan {
@@ -119,9 +121,6 @@ impl Mixer {
         }
         let tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
         self.next_tick = self.next_tick.wrapping_add(tick_len);
-    }
-    pub fn set_num_channels(&mut self, num: usize) {
-        self.chan.resize(num, Channel::new());
     }
 }
 

@@ -27,7 +27,7 @@ impl<'tex> Artist<'tex> {
     fn present(&mut self) {
         self.canvas.present();
     }
-    fn write(&mut self, mut x: i32, y: i32, chars: &str) {
+    fn print(&mut self, mut x: i32, y: i32, chars: &str) {
         for c in chars.as_bytes() {
             let src = Rect::new(
                 (*c as i32 % 16) * CHAR_W,
@@ -35,12 +35,12 @@ impl<'tex> Artist<'tex> {
                 CHAR_W as u32,
                 CHAR_H as u32);
             let dest = Rect::new(
-                x * self.scale as i32,
-                y * self.scale as i32,
+                x * CHAR_W * self.scale as i32,
+                y * CHAR_H * self.scale as i32,
                 CHAR_W as u32 * self.scale,
                 CHAR_H as u32 * self.scale);
             self.canvas.copy(&self.font, Some(src), Some(dest)).unwrap();
-            x += CHAR_W;
+            x += 1;
         }
     }
     fn playback_line(&mut self, row: i32) {
@@ -111,15 +111,18 @@ pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) {
                 _ => {},
             }
         }
-        let mut y = 0;
         artist.clear();
         {
             let c = ctrl.lock().unwrap();
-            artist.bg(6, c.sequence.len() as u32);
-            artist.cursor(0, c.row() as i32, 3, 1);
-            for ref field in c.sequence.iter() {
-                artist.write(0, y, &field.string());
-                y += CHAR_H;
+            artist.bg(c.width() as u32, c.height() as u32);
+            {
+                let (x, y, w, h) = c.cursor();
+                artist.cursor(x, y, w, h);
+            }
+            for (y, ref row) in c.sequence.iter().enumerate() {
+                for (x, ref field) in row.iter().enumerate() {
+                    artist.print(x as i32 * c.field_w() as i32, y as i32, &field.string());
+                }
             }
             artist.playback_line(c.row() as i32);
         }
