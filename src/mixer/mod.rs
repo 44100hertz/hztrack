@@ -9,8 +9,7 @@ use self::control::*;
 const PBITS: u32 = 8; // Bits of fixed-point precision for phase.
 const PBITSF: f64 = (1<<PBITS) as f64;
 
-// hack: must use the returned audiodevice for scope reasons.
-pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) -> AudioDevice<Mixer> {
+pub fn run<C: Controller + Send>(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<C>>) -> AudioDevice<Mixer<C>> {
     let audio_subsys = sdl.audio().unwrap();
     let desired = AudioSpecDesired {
         freq: Some(48000),
@@ -66,7 +65,7 @@ impl Channel {
     }
 }
 
-pub struct Mixer {
+pub struct Mixer<C> {
     srate: u32,         // sampling rate
     samp_count: u32,    // sample count; used for ticking
     next_tick: u32,     // will tick again when sample count reaches this
@@ -74,12 +73,12 @@ pub struct Mixer {
     tick_rate: u8,      // number of ticks per beat
     pcm: Vec<i8>,
     chan: Vec<Channel>,
-    ctrl: Arc<Mutex<Controller>>,
+    ctrl: Arc<Mutex<C>>,
 }
 
-impl Mixer {
-    pub fn new(srate: i32, ctrl: Arc<Mutex<Controller>>) -> Mixer {
-        let mut mixer = Mixer {
+impl<C: Controller> Mixer<C> {
+    pub fn new(srate: i32, ctrl: Arc<Mutex<C>>) -> Mixer<C> {
+        let mixer = Mixer {
             srate: srate as u32,
             samp_count: 0,
             next_tick: 0,
@@ -124,7 +123,7 @@ impl Mixer {
     }
 }
 
-impl AudioCallback for Mixer {
+impl<C: Controller + Send> AudioCallback for Mixer<C> {
     type Channel = i16;
     fn callback(&mut self, out: &mut [i16]) {
         for v in out.iter_mut() {

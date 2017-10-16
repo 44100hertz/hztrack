@@ -5,6 +5,7 @@ mod mixer;
 mod ui;
 
 use mixer::control::*;
+use ui::sequence::*;
 
 fn main() {
     let seq = vec![
@@ -18,7 +19,7 @@ fn main() {
                 cmd: None,
             },
         ]];
-    let ctrl = Controller::new(seq);
+    let ctrl = Sequence::new(seq);
     let sdl = sdl2::init().unwrap();
     let mixer = mixer::run(&sdl, ctrl.clone());
     ui::run(&sdl, ctrl.clone());

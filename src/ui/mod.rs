@@ -1,5 +1,4 @@
 use std::sync::{Mutex, Arc};
-use mixer::control::Controller;
 
 extern crate sdl2;
 use sdl2::pixels::Color;
@@ -9,6 +8,9 @@ use sdl2::rect::*;
 
 mod keyboard;
 use self::keyboard::Keyboard;
+
+pub mod sequence;
+use self::sequence::*;
 
 const CHAR_W: i32 = 8;
 const CHAR_H: i32 = 8;
@@ -69,7 +71,7 @@ impl<'tex> Artist<'tex> {
     }
 }
 
-pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) {
+pub fn run(sdl: &sdl2::Sdl, seq: Arc<Mutex<Sequence>>) {
     let video_subsys = sdl.video().unwrap();
     let win = video_subsys.window("rusttracker", 800, 600)
         .position_centered()
@@ -106,20 +108,20 @@ pub fn run(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<Controller>>) {
                 Event::KeyDown{scancode, ..} => {
                     keyboard.handle_key(
                         scancode.unwrap(),
-                        ctrl.lock().unwrap());
+                        seq.lock().unwrap());
                 },
                 _ => {},
             }
         }
         artist.clear();
         {
-            let c = ctrl.lock().unwrap();
+            let c = seq.lock().unwrap();
             artist.bg(c.width() as u32, c.height() as u32);
             {
                 let (x, y, w, h) = c.cursor();
                 artist.cursor(x, y, w, h);
             }
-            for (y, ref row) in c.sequence.iter().enumerate() {
+            for (y, ref row) in c.pattern.iter().enumerate() {
                 for (x, ref field) in row.iter().enumerate() {
                     artist.print(x as i32 * c.field_w() as i32, y as i32, &field.string());
                 }

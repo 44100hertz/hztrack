@@ -2,6 +2,7 @@ use std::sync::{MutexGuard};
 use sdl2::keyboard::Scancode;
 
 use mixer::control::*;
+use super::sequence::*;
 
 pub struct Keyboard {
     octave: u8,
@@ -18,63 +19,63 @@ impl Keyboard {
         if self.octave > 0 { self.octave -= 1; }
     }
     pub fn handle_key(&mut self, sc:Scancode,
-                      mut ctrl: MutexGuard<Controller>) {
+                      mut seq: MutexGuard<Sequence>) {
         let note_offset = self.octave * 12;
-        let note = |n: u8, mut ctrl: MutexGuard<Controller>| {
+        let note = |n: u8, mut seq: MutexGuard<Sequence>| {
             let total = n + note_offset;
             if total < 12*10 {
-                ctrl.set_note(Note::On(total));
+                seq.set_note(Note::On(total));
             }
         };
         match sc {
             // octave 0
-            Scancode::Z => note(0, ctrl),
-            Scancode::S    => note(1, ctrl),
-            Scancode::X => note(2, ctrl),
-            Scancode::D    => note(3, ctrl),
-            Scancode::C => note(4, ctrl),
-            Scancode::V => note(5, ctrl),
-            Scancode::G    => note(6, ctrl),
-            Scancode::B => note(7, ctrl),
-            Scancode::H    => note(8, ctrl),
-            Scancode::N => note(9, ctrl),
-            Scancode::J    => note(10, ctrl),
-            Scancode::M => note(11, ctrl),
+            Scancode::Z => note(0, seq),
+            Scancode::S    => note(1, seq),
+            Scancode::X => note(2, seq),
+            Scancode::D    => note(3, seq),
+            Scancode::C => note(4, seq),
+            Scancode::V => note(5, seq),
+            Scancode::G    => note(6, seq),
+            Scancode::B => note(7, seq),
+            Scancode::H    => note(8, seq),
+            Scancode::N => note(9, seq),
+            Scancode::J    => note(10, seq),
+            Scancode::M => note(11, seq),
             // octave 1
-            Scancode::Q => note(12, ctrl),
-            Scancode::Num2 => note(13, ctrl),
-            Scancode::W => note(14, ctrl),
-            Scancode::Num3 => note(15, ctrl),
-            Scancode::E => note(16, ctrl),
-            Scancode::R => note(17, ctrl),
-            Scancode::Num5 => note(18, ctrl),
-            Scancode::T => note(19, ctrl),
-            Scancode::Num6 => note(20, ctrl),
-            Scancode::Y => note(21, ctrl),
-            Scancode::Num7 => note(22, ctrl),
-            Scancode::U => note(23, ctrl),
+            Scancode::Q => note(12, seq),
+            Scancode::Num2 => note(13, seq),
+            Scancode::W => note(14, seq),
+            Scancode::Num3 => note(15, seq),
+            Scancode::E => note(16, seq),
+            Scancode::R => note(17, seq),
+            Scancode::Num5 => note(18, seq),
+            Scancode::T => note(19, seq),
+            Scancode::Num6 => note(20, seq),
+            Scancode::Y => note(21, seq),
+            Scancode::Num7 => note(22, seq),
+            Scancode::U => note(23, seq),
             // octave 2
-            Scancode::I => note(24, ctrl),
-            Scancode::Num9 => note(25, ctrl),
-            Scancode::O => note(26, ctrl),
-            Scancode::Num0 => note(27, ctrl),
-            Scancode::P => note(28, ctrl),
+            Scancode::I => note(24, seq),
+            Scancode::Num9 => note(25, seq),
+            Scancode::O => note(26, seq),
+            Scancode::Num0 => note(27, seq),
+            Scancode::P => note(28, seq),
 
-            Scancode::Num1  => ctrl.set_note(Note::Off),
-            Scancode::Grave => ctrl.set_note(Note::Hold),
+            Scancode::Num1  => seq.set_note(Note::Off),
+            Scancode::Grave => seq.set_note(Note::Hold),
 
             Scancode::PageUp    => self.octave_up(),
             Scancode::PageDown  => self.octave_down(),
 
-            Scancode::Up    => ctrl.move_cursor(0, -1),
-            Scancode::Down  => ctrl.move_cursor(0, 1),
-            Scancode::Left  => ctrl.move_cursor(-1, 0),
-            Scancode::Right => ctrl.move_cursor(1, 0),
+            Scancode::Up    => seq.move_cursor(0, -1),
+            Scancode::Down  => seq.move_cursor(0, 1),
+            Scancode::Left  => seq.move_cursor(-1, 0),
+            Scancode::Right => seq.move_cursor(1, 0),
 
-            Scancode::Insert => ctrl.insert(),
-            Scancode::Delete => ctrl.remove(),
+            Scancode::Insert => seq.insert(),
+            Scancode::Delete => seq.remove(),
 
-            Scancode::Space => ctrl.play = !ctrl.play,
+            Scancode::Space => seq.play = !seq.play,
 
             _ => {}
         };
