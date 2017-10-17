@@ -44,7 +44,16 @@ impl Column {
                     }
                 }
             }
-            _ => eprintln!("unimplemented"),
+            Column::CommandHi => {
+                if let Some(v) = keyboard::to_hex(sc) {
+                    seq.sel_field().cmd.set_hi(v);
+                }
+            }
+            Column::CommandLo => {
+                if let Some(v) = keyboard::to_hex(sc) {
+                    seq.sel_field().cmd.set_lo(v);
+                }
+            }
         }
     }
 }

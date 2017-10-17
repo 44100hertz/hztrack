@@ -2,6 +2,27 @@ use sdl2::keyboard::Scancode;
 
 use mixer::control::*;
 
+pub fn to_hex(sc: Scancode) -> Option<u8> {
+    match sc {
+        Scancode::Num1 => Some(1),
+        Scancode::Num2 => Some(2),
+        Scancode::Num3 => Some(3),
+        Scancode::Num4 => Some(4),
+        Scancode::Num5 => Some(5),
+        Scancode::Num6 => Some(6),
+        Scancode::Num7 => Some(7),
+        Scancode::Num8 => Some(8),
+        Scancode::Num9 => Some(9),
+        Scancode::A    => Some(0xA),
+        Scancode::B    => Some(0xB),
+        Scancode::C    => Some(0xC),
+        Scancode::D    => Some(0xD),
+        Scancode::E    => Some(0xE),
+        Scancode::F    => Some(0xF),
+        _ => None,
+    }
+}
+
 pub fn to_note(sc: Scancode) -> Note {
     match sc {
         // note: the indentation is for white and black keys!

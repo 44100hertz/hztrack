@@ -76,6 +76,8 @@ impl Command {
             c @ _ => eprintln!("unknown command id: {}", c),
         }
     }
-    pub fn lo(&self) -> u8 { self.data & 0xf }
     pub fn hi(&self) -> u8 { self.data >> 4 }
+    pub fn lo(&self) -> u8 { self.data & 0xf }
+    pub fn set_hi(&mut self, v: u8) { self.data = self.lo() + (v << 4) }
+    pub fn set_lo(&mut self, v: u8) { self.data = (self.data & 0xf0) + (v & 0xf) }
 }
