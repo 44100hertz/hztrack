@@ -31,8 +31,8 @@ impl ::std::ops::Add<u8> for Note {
 
 #[derive(Clone)]
 pub struct Command {
-    id: u8,
-    data: u8,
+    pub id: u8,
+    pub data: u8,
 }
 
 impl Field {

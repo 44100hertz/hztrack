@@ -1,5 +1,3 @@
-// 0123456789ABCDEFGHJKLMNPQRTUVWXY
-
 pub fn from_char(c: char) -> u8 {
     let wide = match c {
         'O' | 'o' => '0',
@@ -9,4 +7,8 @@ pub fn from_char(c: char) -> u8 {
         _ => c.to_uppercase().nth(0).unwrap(),
     };
     wide as u8
+}
+
+pub fn contains(c: char) -> bool {
+    "0123456789ABCDEFGHJKLMNPQRTUVWXY".contains(c)
 }

@@ -3,6 +3,7 @@ use sdl2::keyboard::Scancode;
 use mixer::control::*;
 use std::sync::{Arc, Mutex};
 
+use base32;
 use ui::keyboard;
 
 pub struct Sequence {
@@ -34,7 +35,16 @@ impl Column {
                     _ => seq.set_note(note + 60),
                 }
             },
-            _ => println!("just wait..."),
+            Column::CommandId => {
+                let name = sc.name();
+                if name.len() == 1 {
+                    let id = base32::from_char(name.chars().next().unwrap());
+                    if base32::contains(id as char) {
+                        seq.set_cmd_id(id);
+                    }
+                }
+            }
+            _ => eprintln!("unimplemented"),
         }
     }
 }
@@ -97,6 +107,13 @@ impl Sequence {
 
     pub fn set_note(&mut self, note: Note) {
         self.pattern[self.row][self.col/4].note = note;
+    }
+    pub fn set_cmd_id(&mut self, id: u8) {
+        let cmd = &mut self.pattern[self.row][self.col/4].cmd;
+        match *cmd {
+            Some(ref mut c) => c.id = id,
+            None => *cmd = Some(Command{ id: id, data: 0 }),
+        }
     }
     pub fn move_cursor(&mut self, dx: i32, dy: i32) {
         let modulus = |a, b| {

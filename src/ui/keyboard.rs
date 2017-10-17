@@ -4,7 +4,7 @@ use mixer::control::*;
 
 pub fn to_note(sc: Scancode) -> Note {
     match sc {
-        // note: the indentation is for white and black keys! 
+        // note: the indentation is for white and black keys!
         Scancode::Z => Note::On(0),
         Scancode::S    => Note::On(1),
         Scancode::X => Note::On(2),
