@@ -1,5 +1,3 @@
-use std::sync::{MutexGuard};
-
 use base32;
 use mixer::Mixer;
 
@@ -20,6 +18,16 @@ pub enum Note {
     Off,
     Hold,
 }
+impl ::std::ops::Add<u8> for Note {
+    type Output = Note;
+    fn add(self, with: u8) -> Note {
+        match self {
+            Note::On(v) => Note::On(v + with),
+            _ => self
+        }
+    }
+}
+
 
 #[derive(Clone)]
 pub struct Command {

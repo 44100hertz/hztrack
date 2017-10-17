@@ -7,9 +7,8 @@ use sdl2::video::Window;
 use sdl2::rect::*;
 
 mod keyboard;
-use self::keyboard::Keyboard;
-
 pub mod sequence;
+
 use self::sequence::*;
 
 const CHAR_W: i32 = 8;
@@ -99,17 +98,13 @@ pub fn run(sdl: &sdl2::Sdl, seq: Arc<Mutex<Sequence>>) {
     };
 
     let mut event_pump = sdl.event_pump().unwrap();
-    let mut keyboard = Keyboard::new();
     'main: loop {
         use sdl2::event::Event;
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit{..}  => break 'main,
-                Event::KeyDown{scancode, ..} => {
-                    keyboard.handle_key(
-                        scancode.unwrap(),
-                        seq.lock().unwrap());
-                },
+                Event::KeyDown{scancode, ..} => seq.lock().unwrap()
+                    .handle_key(scancode.unwrap()),
                 _ => {},
             }
         }

@@ -1,11 +1,42 @@
+use sdl2::keyboard::Scancode;
+
 use mixer::control::*;
 use std::sync::{Arc, Mutex};
+
+use ui::keyboard;
 
 pub struct Sequence {
     pub pattern: Vec<Vec<Field>>,
     row: usize,
     col: usize,
     pub play: bool,
+}
+
+pub enum Column {
+    Note,
+    CommandId,
+    CommandHi,
+    CommandLo,
+}
+impl Column {
+    fn width(&self) -> u32 {
+        match *self {
+            Column::Note => 3,
+            _ => 1,
+        }
+    }
+    fn handle_key(&self, seq: &mut Sequence, sc: Scancode) {
+        match *self {
+            Column::Note => {
+                let note = keyboard::to_note(sc);
+                match note {
+                    Note::Hold => {}
+                    _ => seq.set_note(note + 60),
+                }
+            },
+            _ => println!("just wait..."),
+        }
+    }
 }
 
 impl Controller for Sequence {
@@ -39,30 +70,33 @@ impl Sequence {
     pub fn row(&self) -> usize { self.row }
     pub fn col(&self) -> usize { self.col }
 
-    pub fn num_fields(&self) -> u32 { 4 }
     pub fn field_w(&self) -> u32 { 6 }
     pub fn width(&self) -> u32 {
         self.pattern[0].len() as u32 * self.field_w()
     }
     pub fn height(&self) -> u32 { self.pattern.len() as u32 }
     pub fn num_cols(&self) -> u32 {
-        self.pattern[0].len() as u32 * self.num_fields()
+        self.pattern[0].len() as u32 * 4
+    }
+    pub fn col_type(&self) -> Column {
+        match self.col() % 4 {
+            0 => Column::Note,
+            1 => Column::CommandId,
+            2 => Column::CommandHi,
+            3 => Column::CommandLo,
+            _ => panic!("You're in a negative column..."),
+        }
     }
     pub fn cursor(&self) -> (i32, i32, u32, u32) {
         let x = (self.col() + ((self.col()+3)/4)*2) as i32;
         let y = self.row() as i32;
-        let w = match self.col % self.num_fields() as usize {
-            0 => 3,
-            _ => 1,
-        };
+        let w = self.col_type().width();
         let h = 1;
         (x, y, w, h)
     }
 
     pub fn set_note(&mut self, note: Note) {
-        if self.col % 4 == 0 {
-            self.pattern[self.row][self.col/4].note = note;
-        }
+        self.pattern[self.row][self.col/4].note = note;
     }
     pub fn move_cursor(&mut self, dx: i32, dy: i32) {
         let modulus = |a, b| {
@@ -88,5 +122,24 @@ impl Sequence {
 
     pub fn error(&self, err: &str) {
         eprintln!("Error on row: {}\n\t{}", self.row(), err)
+    }
+
+    pub fn handle_key(&mut self, sc: Scancode) {
+        match sc {
+//            Scancode::PageUp    => self.octave_up(),
+//            Scancode::PageDown  => self.octave_down(),
+
+            Scancode::Up    => self.move_cursor(0, -1),
+            Scancode::Down  => self.move_cursor(0, 1),
+            Scancode::Left  => self.move_cursor(-1, 0),
+            Scancode::Right => self.move_cursor(1, 0),
+
+            Scancode::Insert => self.insert(),
+            Scancode::Delete => self.remove(),
+
+            Scancode::Space => self.play = !self.play,
+
+            _ => self.col_type().handle_key(self, sc),
+        };
     }
 }
