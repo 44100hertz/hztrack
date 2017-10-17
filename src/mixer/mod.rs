@@ -50,11 +50,6 @@ impl Channel {
             arp: [0; 2],
         }
     }
-    fn calc_pitch(&mut self, srate: u32, arp: u8) {
-        let fine_note = (self.note + ((arp as u16)<<8)) as f64 / 2f64.powi(8);
-        let note = (2.0f64).powf((fine_note - 60.0) / 12.0) * 440.0;
-        self.phase_inc = self.pcm_speed * (note * PBITSF) as u32 / srate;
-    }
     fn set_note(&mut self, note: u8) {
         self.note = (note as u16)<<8;
     }
@@ -118,13 +113,15 @@ impl<C: Controller> Mixer<C> {
         }
         self.tick_count += 1;
         for chan in &mut self.chan {
-            let arp_v = match tick_count % 3 {
+            let arp = match tick_count % 3 {
                 0 => 0,
                 1 => chan.arp[0],
                 2 => chan.arp[1],
                 _ => panic!(),
             };
-            chan.calc_pitch(self.srate, arp_v);
+            let fine_note = (chan.note + ((arp as u16)<<8)) as f64 / 2f64.powi(8);
+            let note = (2.0f64).powf((fine_note - 60.0) / 12.0) * 440.0;
+            chan.phase_inc = chan.pcm_speed * (note * PBITSF) as u32 / self.srate;
         }
         let tick_len = self.srate * 60 / self.bpm as u32 / (self.tick_rate+1) as u32;
         self.next_tick = self.next_tick.wrapping_add(tick_len);
