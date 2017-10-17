@@ -9,7 +9,7 @@ pub trait Controller {
 #[derive(Clone)]
 pub struct Field {
     pub note: Note,
-    pub cmd: Option<Command>,
+    pub cmd: Command,
 }
 
 #[derive(Clone)]
@@ -18,16 +18,6 @@ pub enum Note {
     Off,
     Hold,
 }
-impl ::std::ops::Add<u8> for Note {
-    type Output = Note;
-    fn add(self, with: u8) -> Note {
-        match self {
-            Note::On(v) => Note::On(v + with),
-            _ => self
-        }
-    }
-}
-
 
 #[derive(Clone)]
 pub struct Command {
@@ -45,20 +35,26 @@ impl Field {
                 out.push_str(&NOTE_NAME[name*2..name*2+2]);
                 let octave = note / 12;
                 out.push_str(&format!("{}", octave));
-            },
+            }
             Note::Off => out.push_str("---"),
             Note::Hold => out.push_str("   "),
         }
-        match self.cmd {
-            Some(ref cmd) => out.push_str(
-                &format!("{}{:02X}", cmd.id as char, cmd.data)),
-            None => out.push_str("   "),
-        }
+        out.push_str(&format!("{}{:02X}", self.cmd.id as char, self.cmd.data));
         out
     }
 }
 
+impl ::std::ops::Add<u8> for Note {
+    type Output = Note;
+    fn add(self, with: u8) -> Note {
+        match self {
+            Note::On(v) => Note::On(v + with),
+            _ => self
+        }
+    }
+}
 impl Command {
+    pub fn zero() -> Command { Command { id: '0' as u8, data: 0 } }
     pub fn from_str(raw: &str) -> Command {
         let mut chars = raw.chars();
         Command {
@@ -69,6 +65,7 @@ impl Command {
     pub fn execute<C: Controller>(&self, m: &mut Mixer<C>) {
         let mut c = m.ctrl.lock().unwrap();
         match self.id as char {
+            '0' => {}
             '2' => {
                 if self.data < 32 {
                     m.tick_rate = self.data

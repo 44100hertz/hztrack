@@ -32,7 +32,7 @@ impl Column {
                 let note = keyboard::to_note(sc);
                 match note {
                     Note::Hold => {}
-                    _ => seq.set_note(note + 60),
+                    _ => seq.sel_field().note = note + 60,
                 }
             },
             Column::CommandId => {
@@ -40,7 +40,7 @@ impl Column {
                 if name.len() == 1 {
                     let id = base32::from_char(name.chars().next().unwrap());
                     if base32::contains(id as char) {
-                        seq.set_cmd_id(id);
+                        seq.sel_field().cmd.id = id;
                     }
                 }
             }
@@ -51,11 +51,10 @@ impl Column {
 
 impl Controller for Sequence {
     fn next(&mut self) -> Vec<Field> {
-        let ret = self.pattern[self.row].clone();
         if self.play {
             self.move_cursor(0, 1);
         }
-        ret
+        self.pattern[self.row].clone()
     }
     fn jump_pos(&mut self, row: u8) {
         if (row as u32) < self.height() {
@@ -105,16 +104,8 @@ impl Sequence {
         (x, y, w, h)
     }
 
-    pub fn set_note(&mut self, note: Note) {
-        self.pattern[self.row][self.col/4].note = note;
-    }
-    pub fn set_cmd_id(&mut self, id: u8) {
-        let cmd = &mut self.pattern[self.row][self.col/4].cmd;
-        match *cmd {
-            Some(ref mut c) => c.id = id,
-            None => *cmd = Some(Command{ id: id, data: 0 }),
-        }
-    }
+    fn sel_field(&mut self) -> &mut Field { &mut self.pattern[self.row][self.col/4] }
+
     pub fn move_cursor(&mut self, dx: i32, dy: i32) {
         let modulus = |a, b| {
             ((a % b + b) % b) as usize
@@ -126,7 +117,7 @@ impl Sequence {
         let mut blank_row = vec![];
         blank_row.resize(
             self.pattern[0].len(),
-            Field{note: Note::Hold, cmd: None});
+            Field{note: Note::Hold, cmd: Command::zero()});
         self.pattern.insert(self.row+1, blank_row);
         self.row += 1;
     }

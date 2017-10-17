@@ -12,11 +12,11 @@ fn main() {
         vec![
             Field{
                 note: Note::Hold,
-                cmd: Some(Command::from_str("b00"))
+                cmd: Command::from_str("b00")
             },
             Field{
                 note: Note::Hold,
-                cmd: None,
+                cmd: Command::zero(),
             },
         ]];
     let ctrl = Sequence::new(seq);

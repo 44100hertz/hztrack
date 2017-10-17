@@ -70,6 +70,7 @@ pub struct Mixer<C> {
     next_tick: u32,     // will tick again when sample count reaches this
     bpm: u8,
     tick_rate: u8,      // number of ticks per beat
+    tick_count: u32,
     pcm: Vec<i8>,
     chan: Vec<Channel>,
     ctrl: Arc<Mutex<C>>,
@@ -83,6 +84,7 @@ impl<C: Controller> Mixer<C> {
             next_tick: 0,
             bpm: 120,
             tick_rate: 6,
+            tick_count: 0,
             chan: Vec::new(),
             ctrl: ctrl,
             pcm: (0..255)
@@ -91,7 +93,7 @@ impl<C: Controller> Mixer<C> {
         };
         mixer
     }
-    fn tick(&mut self) {
+    fn beat(&mut self) {
         let next = self.ctrl.lock().unwrap().next();
         self.chan.resize(next.len(), Channel::new());
         for (i, field) in next.iter().enumerate() {
@@ -103,10 +105,14 @@ impl<C: Controller> Mixer<C> {
                 Note::Off => self.chan[i].vol = 0,
                 Note::Hold => {}
             }
-            if let Some(ref cmd) = field.cmd {
-                cmd.execute(self);
-            }
+            field.cmd.execute(self);
         }
+    }
+    fn tick(&mut self) {
+        if self.tick_count % self.tick_rate as u32 == 0 {
+            self.beat();
+        }
+        self.tick_count += 1;
         for chan in &mut self.chan {
             chan.calc_pitch(self.srate);
         }
