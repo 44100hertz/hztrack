@@ -1,8 +1,6 @@
 use mixer::control::*;
 use std::sync::{Arc, Mutex};
 
-const NUM_FIELDS: u32 = 4;
-
 pub struct Sequence {
     pub pattern: Vec<Vec<Field>>,
     row: usize,
@@ -12,10 +10,18 @@ pub struct Sequence {
 
 impl Controller for Sequence {
     fn next(&mut self) -> Vec<Field> {
+        let ret = self.pattern[self.row].clone();
         if self.play {
             self.move_cursor(0, 1);
         }
-        self.pattern[self.row].clone()
+        ret
+    }
+    fn jump_pos(&mut self, row: u8) {
+        if (row as u32) < self.height() {
+            self.row = row as usize;
+        } else {
+            self.error("attempt to jump to non-existant row");
+        }
     }
 }
 
@@ -29,26 +35,34 @@ impl Sequence {
         };
         Arc::new(Mutex::new(ctrl))
     }
+
     pub fn row(&self) -> usize { self.row }
     pub fn col(&self) -> usize { self.col }
-    pub fn num_cols(&self) -> u32 { self.pattern[0].len() as u32 * NUM_FIELDS }
-    pub fn width(&self) -> u32 { self.pattern[0].len() as u32 * self.field_w() }
-    pub fn height(&self) -> u32 { self.pattern.len() as u32 }
+
+    pub fn num_fields(&self) -> u32 { 4 }
     pub fn field_w(&self) -> u32 { 6 }
-    pub fn set_note(&mut self, note: Note) {
-        if self.col % 4 == 0 {
-            self.pattern[self.row][self.col/4].note = note;
-        }
+    pub fn width(&self) -> u32 {
+        self.pattern[0].len() as u32 * self.field_w()
+    }
+    pub fn height(&self) -> u32 { self.pattern.len() as u32 }
+    pub fn num_cols(&self) -> u32 {
+        self.pattern[0].len() as u32 * self.num_fields()
     }
     pub fn cursor(&self) -> (i32, i32, u32, u32) {
         let x = (self.col() + ((self.col()+3)/4)*2) as i32;
         let y = self.row() as i32;
-        let w = match self.col % NUM_FIELDS as usize {
+        let w = match self.col % self.num_fields() as usize {
             0 => 3,
             _ => 1,
         };
         let h = 1;
         (x, y, w, h)
+    }
+
+    pub fn set_note(&mut self, note: Note) {
+        if self.col % 4 == 0 {
+            self.pattern[self.row][self.col/4].note = note;
+        }
     }
     pub fn move_cursor(&mut self, dx: i32, dy: i32) {
         let modulus = |a, b| {
@@ -58,9 +72,10 @@ impl Sequence {
         self.col = modulus(self.col as i32 + dx, self.num_cols() as i32);
     }
     pub fn insert(&mut self) {
-        let blank_row: Vec<_> = ::std::iter::repeat(Field{note: Note::Hold, cmd: None})
-            .take(self.pattern[0].len())
-            .collect();
+        let mut blank_row = vec![];
+        blank_row.resize(
+            self.pattern[0].len(),
+            Field{note: Note::Hold, cmd: None});
         self.pattern.insert(self.row+1, blank_row);
         self.row += 1;
     }
@@ -69,5 +84,9 @@ impl Sequence {
             self.pattern.remove(self.row);
             self.row = if self.row == 0 {0} else {self.row - 1}
         }
+    }
+
+    pub fn error(&self, err: &str) {
+        eprintln!("Error on row: {}\n\t{}", self.row(), err)
     }
 }

@@ -1,8 +1,11 @@
+use std::sync::{MutexGuard};
+
 use base32;
 use mixer::Mixer;
 
 pub trait Controller {
     fn next(&mut self) -> Vec<Field>;
+    fn jump_pos(&mut self, row: u8);
 }
 
 #[derive(Clone)]
@@ -55,14 +58,17 @@ impl Command {
             data: u8::from_str_radix(chars.as_str(), 16).unwrap(),
         }
     }
-    pub fn execute<C>(&self, m: &mut Mixer<C>) {
+    pub fn execute<C: Controller>(&self, m: &mut Mixer<C>) {
+        let mut c = m.ctrl.lock().unwrap();
         match self.id as char {
             '2' => {
                 if self.data < 32 {
                     m.tick_rate = self.data
                 } else {
-                    m.bpm = self.data }},
-            _ => eprintln!("invalid command!"),
+                    m.bpm = self.data
+                }},
+            'B' => c.jump_pos(self.data),
+            c @ _ => eprintln!("unknown command id: {}", c),
         }
     }
 }

@@ -9,7 +9,9 @@ use self::control::*;
 const PBITS: u32 = 8; // Bits of fixed-point precision for phase.
 const PBITSF: f64 = (1<<PBITS) as f64;
 
-pub fn run<C: Controller + Send>(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<C>>) -> AudioDevice<Mixer<C>> {
+pub fn run<C: Controller + Send>(sdl: &sdl2::Sdl, ctrl: Arc<Mutex<C>>) ->
+AudioDevice<Mixer<C>>
+{
     let audio_subsys = sdl.audio().unwrap();
     let desired = AudioSpecDesired {
         freq: Some(48000),
@@ -90,23 +92,19 @@ impl<C: Controller> Mixer<C> {
         mixer
     }
     fn tick(&mut self) {
-        {
-            let cc = self.ctrl.clone();
-            let mut ctrl = cc.lock().unwrap();
-            let next = ctrl.next();
-            self.chan.resize(next.len(), Channel::new());
-            for (i, field) in next.iter().enumerate() {
-                if let Some(ref cmd) = field.cmd {
-                    cmd.execute(self);
-                }
-                match field.note {
-                    Note::On(note) => {
-                        self.chan[i].vol = 127;
-                        self.chan[i].set_note(note);
-                    },
-                    Note::Off => self.chan[i].vol = 0,
-                    Note::Hold => {}
-                }
+        let next = self.ctrl.lock().unwrap().next();
+        self.chan.resize(next.len(), Channel::new());
+        for (i, field) in next.iter().enumerate() {
+            match field.note {
+                Note::On(note) => {
+                    self.chan[i].vol = 63;
+                    self.chan[i].set_note(note);
+                },
+                Note::Off => self.chan[i].vol = 0,
+                Note::Hold => {}
+            }
+            if let Some(ref cmd) = field.cmd {
+                cmd.execute(self);
             }
         }
         for chan in &mut self.chan {

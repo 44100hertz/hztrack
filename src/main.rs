@@ -12,7 +12,7 @@ fn main() {
         vec![
             Field{
                 note: Note::Hold,
-                cmd: Some(Command::from_str("z06"))
+                cmd: Some(Command::from_str("b00"))
             },
             Field{
                 note: Note::Hold,
