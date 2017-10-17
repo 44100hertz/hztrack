@@ -25,6 +25,19 @@ AudioDevice<Mixer<C>>
     device
 }
 
+pub struct Mixer<C> {
+    srate: u32,         // sampling rate
+    samp_count: u32,    // sample count; used for ticking
+    next_tick: u32,     // will tick again when sample count reaches this
+    bpm: u8,
+    tick_rate: u8,      // number of ticks per beat
+    tick_count: u32,
+    pcm: Vec<i8>,
+    chan: Vec<Channel>,
+    ctrl: Arc<Mutex<C>>,
+    pattern_row: Vec<Field>,
+}
+
 #[derive(Clone)]
 pub struct Channel {
     phase: u32,
@@ -34,7 +47,6 @@ pub struct Channel {
     pcm_len: u32,
     pcm_speed: u32,
     vol: i16,
-    arp: [u8; 2],
 }
 
 impl Channel {
@@ -47,7 +59,6 @@ impl Channel {
             pcm_speed: 256,
             note: 0,
             vol: 0,
-            arp: [0; 2],
         }
     }
     fn set_note(&mut self, note: u8) {
@@ -59,18 +70,6 @@ impl Channel {
         self.phase = self.phase.wrapping_add(self.phase_inc);
         point as i16 * self.vol
     }
-}
-
-pub struct Mixer<C> {
-    srate: u32,         // sampling rate
-    samp_count: u32,    // sample count; used for ticking
-    next_tick: u32,     // will tick again when sample count reaches this
-    bpm: u8,
-    tick_rate: u8,      // number of ticks per beat
-    tick_count: u32,
-    pcm: Vec<i8>,
-    chan: Vec<Channel>,
-    ctrl: Arc<Mutex<C>>,
 }
 
 impl<C: Controller> Mixer<C> {
@@ -86,14 +85,20 @@ impl<C: Controller> Mixer<C> {
             ctrl: ctrl,
             pcm: (0..255)
                 .map(|i| ((i as f64 / 128.0 * 3.1415).sin() * 127.0) as i8)
-                .collect()
+                .collect(),
+            pattern_row: vec![],
         };
         mixer
     }
-    fn beat(&mut self) {
-        let next = self.ctrl.lock().unwrap().next();
-        self.chan.resize(next.len(), Channel::new());
-        for (i, field) in next.iter().enumerate() {
+    fn tick(&mut self) {
+        let tick_count = self.tick_count as usize % self.tick_rate as usize;
+        if tick_count == 0 {
+            self.pattern_row = self.ctrl.lock().unwrap().next();
+            self.chan.resize(self.pattern_row.len(), Channel::new());
+        }
+        self.tick_count += 1;
+        for (i, field) in self.pattern_row.iter().enumerate() {
+            let mut arp = 0u16;
             match field.note {
                 Note::On(note) => {
                     self.chan[i].vol = 63;
@@ -102,24 +107,27 @@ impl<C: Controller> Mixer<C> {
                 Note::Off => self.chan[i].vol = 0,
                 Note::Hold => {}
             }
-            self.chan[i].arp = [0; 2];
-            field.cmd.execute(self, i);
-        }
-    }
-    fn tick(&mut self) {
-        let tick_count = self.tick_count as usize % self.tick_rate as usize;
-        if tick_count == 0 {
-            self.beat();
-        }
-        self.tick_count += 1;
-        for chan in &mut self.chan {
-            let arp = match tick_count % 3 {
-                0 => 0,
-                1 => chan.arp[0],
-                2 => chan.arp[1],
-                _ => panic!(),
-            };
-            let inote = chan.note + ((arp as u16)<<8);
+            match field.cmd.id as char {
+                '0' => {
+                    arp = match tick_count % 3 {
+                        0 => 0,
+                        1 => field.cmd.hi() as u16,
+                        2 => field.cmd.lo() as u16,
+                        _ => unreachable!(),
+                    };
+                }
+                '2' => {
+                    if field.cmd.data < 32 {
+                        self.tick_rate = field.cmd.data
+                    } else {
+                        self.bpm = field.cmd.data
+                    }
+                }
+                'B' => self.ctrl.lock().unwrap().jump_pos(field.cmd.data),
+                c @ _ => eprintln!("unknown command id: {}", c),
+            }
+            let chan = &mut self.chan[i];
+            let inote = chan.note + (arp<<8);
             let fnote = inote as f64 / 2f64.powi(8);
             let pitch = (2.0f64).powf((fnote - 60.0) / 12.0) * 440.0;
             chan.phase_inc = (pitch * PBITSF) as u32 *
