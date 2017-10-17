@@ -119,11 +119,13 @@ impl<C: Controller> Mixer<C> {
                 2 => chan.arp[1],
                 _ => panic!(),
             };
-            let fine_note = (chan.note + ((arp as u16)<<8)) as f64 / 2f64.powi(8);
-            let note = (2.0f64).powf((fine_note - 60.0) / 12.0) * 440.0;
-            chan.phase_inc = chan.pcm_speed * (note * PBITSF) as u32 / self.srate;
+            let inote = chan.note + ((arp as u16)<<8);
+            let fnote = inote as f64 / 2f64.powi(8);
+            let pitch = (2.0f64).powf((fnote - 60.0) / 12.0) * 440.0;
+            chan.phase_inc = (pitch * PBITSF) as u32 *
+                chan.pcm_speed / self.srate;
         }
-        let tick_len = self.srate * 60 / self.bpm as u32 / (self.tick_rate+1) as u32;
+        let tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
         self.next_tick = self.next_tick.wrapping_add(tick_len);
     }
 }

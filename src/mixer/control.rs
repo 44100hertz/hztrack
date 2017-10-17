@@ -68,7 +68,7 @@ impl Command {
             '0' => m.chan[chan].arp = [self.hi(), self.lo()],
             '2' => {
                 if self.data < 32 {
-                    m.tick_rate = self.data
+                    m.tick_rate = self.data + 1
                 } else {
                     m.bpm = self.data
                 }},

@@ -4,6 +4,7 @@ use mixer::control::*;
 
 pub fn to_hex(sc: Scancode) -> Option<u8> {
     match sc {
+        Scancode::Num0 => Some(0),
         Scancode::Num1 => Some(1),
         Scancode::Num2 => Some(2),
         Scancode::Num3 => Some(3),
