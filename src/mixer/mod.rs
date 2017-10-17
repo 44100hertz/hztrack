@@ -34,6 +34,7 @@ pub struct Channel {
     pcm_len: u32,
     pcm_speed: u32,
     vol: i16,
+    arp: [u8; 2],
 }
 
 impl Channel {
@@ -46,10 +47,11 @@ impl Channel {
             pcm_speed: 256,
             note: 0,
             vol: 0,
+            arp: [0; 2],
         }
     }
-    fn calc_pitch(&mut self, srate: u32) {
-        let fine_note = self.note as f64 / 2f64.powi(8);
+    fn calc_pitch(&mut self, srate: u32, arp: u8) {
+        let fine_note = (self.note + ((arp as u16)<<8)) as f64 / 2f64.powi(8);
         let note = (2.0f64).powf((fine_note - 60.0) / 12.0) * 440.0;
         self.phase_inc = self.pcm_speed * (note * PBITSF) as u32 / srate;
     }
@@ -105,16 +107,24 @@ impl<C: Controller> Mixer<C> {
                 Note::Off => self.chan[i].vol = 0,
                 Note::Hold => {}
             }
-            field.cmd.execute(self);
+            self.chan[i].arp = [0; 2];
+            field.cmd.execute(self, i);
         }
     }
     fn tick(&mut self) {
-        if self.tick_count % self.tick_rate as u32 == 0 {
+        let tick_count = self.tick_count as usize % self.tick_rate as usize;
+        if tick_count == 0 {
             self.beat();
         }
         self.tick_count += 1;
         for chan in &mut self.chan {
-            chan.calc_pitch(self.srate);
+            let arp_v = match tick_count % 3 {
+                0 => 0,
+                1 => chan.arp[0],
+                2 => chan.arp[1],
+                _ => panic!(),
+            };
+            chan.calc_pitch(self.srate, arp_v);
         }
         let tick_len = self.srate * 60 / self.bpm as u32 / (self.tick_rate+1) as u32;
         self.next_tick = self.next_tick.wrapping_add(tick_len);

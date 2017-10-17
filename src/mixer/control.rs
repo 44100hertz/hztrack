@@ -62,10 +62,10 @@ impl Command {
             data: u8::from_str_radix(chars.as_str(), 16).unwrap(),
         }
     }
-    pub fn execute<C: Controller>(&self, m: &mut Mixer<C>) {
+    pub fn execute<C: Controller>(&self, m: &mut Mixer<C>, chan: usize) {
         let mut c = m.ctrl.lock().unwrap();
         match self.id as char {
-            '0' => {}
+            '0' => m.chan[chan].arp = [self.hi(), self.lo()],
             '2' => {
                 if self.data < 32 {
                     m.tick_rate = self.data
@@ -76,4 +76,6 @@ impl Command {
             c @ _ => eprintln!("unknown command id: {}", c),
         }
     }
+    pub fn lo(&self) -> u8 { self.data & 0xf }
+    pub fn hi(&self) -> u8 { self.data >> 4 }
 }
