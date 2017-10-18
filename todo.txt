@@ -1,0 +1,14 @@
+-* TODO -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+ - Decoupling woes -
+I'm realizing that it's not the commands I should be sending, but the sound state that they send.
+This is best exemplefied by how the mixer needs to call "jump" on the sequence, which makes absolutely no sense.
+My proposal is to move the notion of commands entirely into the ui.
+
+ - Instruments -
+Make an instrument table and an instrument column.
+
+ - PCM sample management -
+Right now there's only one instrument, ideally I'd load them from a file.
+
+ - resampling -
+Linear is a good compromise, though something that lets me do filters would be awesome.
