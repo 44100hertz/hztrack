@@ -19,6 +19,7 @@ pub enum Column {
     CommandHi,
     CommandLo,
 }
+
 impl Column {
     fn width(&self) -> u32 {
         match *self {
@@ -32,7 +33,7 @@ impl Column {
                 let note = keyboard::to_note(sc);
                 match note {
                     Note::Hold => {}
-                    _ => seq.sel_field().note = note + 60,
+                    _ => seq.field().note = note + 60,
                 }
             },
             Column::CommandId => {
@@ -40,18 +41,18 @@ impl Column {
                 if name.len() == 1 {
                     let id = base32::from_char(name.chars().next().unwrap());
                     if base32::contains(id as char) {
-                        seq.sel_field().cmd.id = id;
+                        seq.set_cmd_id(id);
                     }
                 }
             }
             Column::CommandHi => {
                 if let Some(v) = keyboard::to_hex(sc) {
-                    seq.sel_field().cmd.set_hi(v);
+                    seq.field().cmd.set_hi(v);
                 }
             }
             Column::CommandLo => {
                 if let Some(v) = keyboard::to_hex(sc) {
-                    seq.sel_field().cmd.set_lo(v);
+                    seq.field().cmd.set_lo(v);
                 }
             }
         }
@@ -113,7 +114,22 @@ impl Sequence {
         (x, y, w, h)
     }
 
-    fn sel_field(&mut self) -> &mut Field { &mut self.pattern[self.row][self.col/4] }
+    fn field(&mut self) -> &mut Field {
+        &mut self.pattern[self.row][self.col/4]
+    }
+    fn set_cmd_id(&mut self, id: u8) {
+        if self.field().cmd.data == 0 && id != '0' as u8 {
+            for row in (0..self.row()).rev() {
+                let prev_cmd = self.pattern[row][self.col()/4].cmd.clone();
+                if prev_cmd.id == id {
+                    self.field().cmd.data = prev_cmd.data;
+                } else if prev_cmd.id != '0' as u8 {
+                    break
+                }
+            }
+        }
+        self.field().cmd.id = id;
+    }
 
     pub fn move_cursor(&mut self, dx: i32, dy: i32) {
         let modulus = |a, b| {
