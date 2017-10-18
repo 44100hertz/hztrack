@@ -118,12 +118,13 @@ impl<C: Controller> Mixer<C> {
         }
         for (i, field) in self.pattern_row.iter().enumerate() {
             let mut arp = 0u16;
+            let chan = &mut self.chan[i];
             match field.note {
                 Note::On(note) => {
-                    self.chan[i].vol = 63;
-                    self.chan[i].set_note(note);
+                    chan.vol = 63;
+                    chan.set_note(note);
                 },
-                Note::Off => self.chan[i].vol = 0,
+                Note::Off => chan.vol = 0,
                 Note::Hold => {}
             }
             match field.cmd.id as char {
@@ -135,7 +136,13 @@ impl<C: Controller> Mixer<C> {
                         _ => unreachable!(),
                     };
                 }
-                '2' => {
+                '1' => chan.note += (field.cmd.data as u16)<<4,
+                '2' => chan.note =
+                    match chan.note.checked_sub((field.cmd.data as u16)<<4) {
+                        Some(v) => v,
+                        None => 0,
+                    },
+                'F' => {
                     if field.cmd.data < 32 {
                         self.tick_rate = field.cmd.data + 1
                     } else {
@@ -145,7 +152,8 @@ impl<C: Controller> Mixer<C> {
                 'B' => self.ctrl.lock().unwrap().jump_pos(field.cmd.data),
                 c @ _ => eprintln!("unknown command id: {}", c),
             }
-            let chan = &mut self.chan[i];
+            if chan.note > 120<<8 { chan.note = 120<<8 }
+
             let inote = chan.note + (arp<<8);
             let fnote = inote as f64 / 2f64.powi(8);
             let pitch = (2.0f64).powf((fnote - 60.0) / 12.0) * 440.0;
