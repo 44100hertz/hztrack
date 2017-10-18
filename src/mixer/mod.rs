@@ -72,6 +72,26 @@ impl Channel {
     }
 }
 
+impl<C: Controller + Send> AudioCallback for Mixer<C> {
+    type Channel = i16;
+    fn callback(&mut self, out: &mut [i16]) {
+        for v in out.iter_mut() {
+            if self.samp_count == self.next_tick { self.tick(); }
+            *v = {
+                let mut total: i16 = 0;
+                for chan in &mut self.chan {
+                    let pcm_from = chan.pcm_off as usize;
+                    let pcm_to = pcm_from + chan.pcm_len as usize;
+                    let pcm = &self.pcm[pcm_from..pcm_to];
+                    total = total.saturating_add(chan.get_point(pcm));
+                }
+                total
+            };
+            self.samp_count += 1;
+        }
+    }
+}
+
 impl<C: Controller> Mixer<C> {
     pub fn new(srate: i32, ctrl: Arc<Mutex<C>>) -> Mixer<C> {
         let mixer = Mixer {
@@ -91,12 +111,11 @@ impl<C: Controller> Mixer<C> {
         mixer
     }
     fn tick(&mut self) {
-        let tick_count = self.tick_count as usize % self.tick_rate as usize;
-        if tick_count == 0 {
+        self.tick_count = (self.tick_count+1) % self.tick_rate as u32;
+        if self.tick_count == 0 {
             self.pattern_row = self.ctrl.lock().unwrap().next();
             self.chan.resize(self.pattern_row.len(), Channel::new());
         }
-        self.tick_count += 1;
         for (i, field) in self.pattern_row.iter().enumerate() {
             let mut arp = 0u16;
             match field.note {
@@ -109,7 +128,7 @@ impl<C: Controller> Mixer<C> {
             }
             match field.cmd.id as char {
                 '0' => {
-                    arp = match tick_count % 3 {
+                    arp = match self.tick_count % 3 {
                         0 => 0,
                         1 => field.cmd.hi() as u16,
                         2 => field.cmd.lo() as u16,
@@ -118,7 +137,7 @@ impl<C: Controller> Mixer<C> {
                 }
                 '2' => {
                     if field.cmd.data < 32 {
-                        self.tick_rate = field.cmd.data
+                        self.tick_rate = field.cmd.data + 1
                     } else {
                         self.bpm = field.cmd.data
                     }
@@ -136,25 +155,4 @@ impl<C: Controller> Mixer<C> {
         let tick_len = self.srate * 60 / self.bpm as u32 / self.tick_rate as u32;
         self.next_tick = self.next_tick.wrapping_add(tick_len);
     }
-}
-
-impl<C: Controller + Send> AudioCallback for Mixer<C> {
-    type Channel = i16;
-    fn callback(&mut self, out: &mut [i16]) {
-        for v in out.iter_mut() {
-            if self.samp_count == self.next_tick { self.tick(); }
-            *v = {
-                let mut total: i16 = 0;
-                for chan in &mut self.chan {
-                    let pcm_from = chan.pcm_off as usize;
-                    let pcm_to = pcm_from + chan.pcm_len as usize;
-                    let pcm = &self.pcm[pcm_from..pcm_to];
-                    total = total.saturating_add(chan.get_point(pcm));
-                }
-                total
-            };
-            self.samp_count += 1;
-        }
-    }
-
 }
