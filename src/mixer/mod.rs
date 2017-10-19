@@ -1,13 +1,15 @@
 use sdl2;
 use sdl2::audio::*;
 
+use std::sync::Arc;
+
 mod mix;
 use self::mix::*;
 
 #[derive(Clone)]
 pub struct MixerIn {
     pub tick_rate:  u16,    // ticks per minute
-    pub pcm:        Vec<i8>,
+    pub pcm:        Arc<Vec<i8>>,
     pub chan:       Vec<ChannelIn>,
 }
 
@@ -33,7 +35,7 @@ AudioDevice<Mixer<C>>
         channels: Some(1),
         samples: None,
     };
-    let device = audio_subsys.open_playback(None, &desired, move |spec| {
+    let device = audio_subsys.open_playback(None, &desired, |spec| {
         Mixer::new(spec.freq, ctrl)
     }).unwrap();
     device.resume();

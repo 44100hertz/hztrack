@@ -1,16 +1,18 @@
+use std::sync::Arc;
+
 extern crate sdl2;
 
 mod mixer;
 use mixer::*;
 
-struct Dummy {}
+struct Dummy {
+    pcm: Arc<Vec<i8>>
+}
 impl Controller for Dummy {
     fn next(&mut self) -> MixerIn {
         MixerIn {
             tick_rate: 120,
-            pcm: (0..256)
-                .map(|i| ((i as f64 / 128.0 * 3.1415).sin() * 127.0) as i8)
-                .collect(),
+            pcm: self.pcm.clone(),
             chan: vec![
                 ChannelIn {
                     note:       60<<8,
@@ -26,6 +28,11 @@ impl Controller for Dummy {
 
 fn main() {
     let sdl = sdl2::init().unwrap();
-    let mixer = mixer::run(&sdl, Dummy{});
+    let pcm: Vec<_> = (0u32..256)
+        .map(|i| ((i as f64 / 128.0 * 3.1415).sin() * 127.0) as i8)
+        .collect();
+    let mixer = mixer::run(&sdl, Dummy{
+        pcm: Arc::new(pcm),
+    });
     std::thread::sleep(std::time::Duration::from_secs(2));
 }

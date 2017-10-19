@@ -1,4 +1,6 @@
-use super::*;
+use std::sync::Arc;
+
+use mixer::*;
 use std::num::Wrapping;
 
 const PBITS: u32 = 8; // Bits of fixed-point precision for phase.
@@ -54,7 +56,7 @@ impl<C: Controller> Mixer<C> {
             chan:       vec![],
             input: MixerIn {
                 tick_rate:  0,
-                pcm:        vec![],
+                pcm:        Arc::new(vec![]),
                 chan:       vec![],
             }
         }
@@ -80,8 +82,8 @@ impl<C: Controller> Mixer<C> {
     }
     fn calc_phase_inc(&mut self, index: usize) {
         let inchan = &self.input.chan[index];
-        let fnote = inchan.note as f64 / 2f64.powi(8);
-        let pitch = (2.0f64).powf((fnote - 60.0) / 12.0) * 440.0;
+        let note = inchan.note as f64 / 2f64.powi(8);
+        let pitch = (2.0f64).powf((note - 60.0) / 12.0) * 440.0;
         self.chan[index].phase_inc =
             (pitch * PBITSF * inchan.pcm_rate as f64) as u32 / self.srate;
     }
