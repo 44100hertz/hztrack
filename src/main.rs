@@ -1,26 +1,31 @@
 extern crate sdl2;
 
-mod base32;
 mod mixer;
-mod ui;
+use mixer::*;
 
-use mixer::control::*;
-use ui::sequence::*;
+struct Dummy {}
+impl Controller for Dummy {
+    fn next(&mut self) -> MixerIn {
+        MixerIn {
+            tick_rate: 120,
+            pcm: (0..256)
+                .map(|i| ((i as f64 / 128.0 * 3.1415).sin() * 127.0) as i8)
+                .collect(),
+            chan: vec![
+                ChannelIn {
+                    note:       60<<8,
+                    pcm_off:    0,
+                    pcm_len:    256,
+                    pcm_rate:   256,
+                    vol:        40,
+                }
+            ]
+        }
+    }
+}
 
 fn main() {
-    let seq = vec![
-        vec![
-            Field{
-                note: Note::Hold,
-                cmd: Command::from_str("035")
-            },
-            Field{
-                note: Note::Hold,
-                cmd: Command::zero(),
-            },
-        ]];
-    let ctrl = Sequence::new(seq);
     let sdl = sdl2::init().unwrap();
-    let mixer = mixer::run(&sdl, ctrl.clone());
-    ui::run(&sdl, ctrl.clone());
+    let mixer = mixer::run(&sdl, Dummy{});
+    std::thread::sleep(std::time::Duration::from_secs(2));
 }
