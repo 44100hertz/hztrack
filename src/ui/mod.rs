@@ -70,7 +70,15 @@ impl<'tex> Artist<'tex> {
     }
 }
 
-pub fn run(sdl: &sdl2::Sdl, seq: Arc<Mutex<Sequence>>) {
+pub fn run(seq: Arc<Mutex<Sequence>>) {
+    let sdl = sdl2::init().unwrap();
+    let pcm: Vec<_> = (0u32..256)
+        .map(|i| ((i as f64 / 128.0 * 3.1415).sin() * 127.0) as i8)
+        .collect();
+    let mixer = mixer::run(&sdl, Dummy{
+        pcm: Arc::new(pcm),
+    });
+
     let video_subsys = sdl.video().unwrap();
     let win = video_subsys.window("rusttracker", 800, 600)
         .position_centered()

@@ -12,6 +12,15 @@ pub struct MixerIn {
     pub pcm:        Arc<Vec<i8>>,
     pub chan:       Vec<ChannelIn>,
 }
+impl MixerIn {
+    pub fn new() -> Self {
+        MixerIn {
+            tick_rate:  0,
+            pcm:        Arc::new(vec![]),
+            chan:       vec![],
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct ChannelIn {
