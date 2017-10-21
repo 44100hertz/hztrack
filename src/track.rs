@@ -40,10 +40,7 @@ impl Controller for Track {
             vol:        0,
         };
 
-        {
-            let w = self.width();
-            self.output.chan.resize(w, DEFAULT_CHAN);
-        }
+        self.output.chan.resize(self.seq[self.row].len(), DEFAULT_CHAN);
         for i in 0..self.width() {
             let chan = &mut self.output.chan[i];
             let field = &self.seq[self.row][i];
@@ -68,7 +65,8 @@ impl Controller for Track {
     }
 }
 impl Track {
-    fn width(&self) -> usize { self.seq[self.row].len() }
+    pub fn width(&self) -> usize { self.seq[self.row].len() }
+    pub fn row(&mut self) -> &mut Vec<Field> { &mut self.seq[self.row] }
 }
 
 #[derive(Clone)]
