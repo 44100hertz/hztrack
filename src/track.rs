@@ -7,11 +7,30 @@ use base32;
 pub struct Track {
     seq:        Vec<Vec<Field>>,
     row:        usize,
-    tick_count: u32,
+    tick_count: u8,
     bpm:        u8,
     tick_rate:  u8,
     pcm:        Arc<Vec<i8>>,
     output:     MixerIn,
+}
+
+#[derive(Clone)]
+pub struct Field {
+    pub note:   Note,
+    pub cmd:    Command,
+}
+
+#[derive(Clone)]
+pub enum Note {
+    On(u8),
+    Off,
+    Hold,
+}
+
+#[derive(Clone)]
+pub struct Command {
+    pub id:     u8,
+    pub data:   u8,
 }
 
 impl Track {
@@ -33,7 +52,8 @@ impl Track {
 impl Controller for Track {
     fn next(&mut self) -> MixerIn {
         const DEFAULT_CHAN: ChannelIn = ChannelIn {
-            note:       60<<8,
+            base_note:  60,
+            note_off:   0,
             pcm_off:    0,
             pcm_len:    256,
             pcm_rate:   256,
@@ -46,16 +66,45 @@ impl Controller for Track {
             let field = &self.seq[self.row][i];
             match field.note {
                 Note::On(n) => {
-                    chan.note = (n as u16)<<8;
-                    chan.vol  = 64;
+                    chan.set_note(n);
+                    chan.vol = 64;
                 }
                 Note::Off => chan.vol = 0,
                 Note::Hold => {},
             }
+            match field.cmd.id as char {
+                '0' => {
+                    chan.note_off = match self.tick_count % 3 {
+                        0 => 0,
+                        1 => (field.cmd.hi() as u16)<<8,
+                        2 => (field.cmd.lo() as u16)<<8,
+                        _ => unreachable!(),
+                    }
+                }
+//      '1' => chan.note += (field.cmd.data as u16)<<4,
+//      '2' => chan.note =
+//          match chan.note.checked_sub((field.cmd.data as u16)<<4) {
+//              Some(v) => v,
+//              None => 0,
+//          },
+//      'F' => {
+//          if field.cmd.data < 32 {
+//              self.tick_rate = field.cmd.data + 1
+//          } else {
+//              self.bpm = field.cmd.data
+//          }
+//      }
+//      'B' => self.ctrl.lock().unwrap().jump_pos(field.cmd.data),
+                c @ _ => eprintln!("unknown command id: {}", c),
+            }
             // todo: handle field command
         }
 
-        self.row = (self.row + 1) % self.seq.len();
+        self.tick_count += 1;
+        if self.tick_count > self.tick_rate {
+            self.tick_count = 0;
+            self.row = (self.row + 1) % self.seq.len();
+        }
 
         MixerIn {
             tick_rate: self.bpm as u16 * self.tick_rate as u16,
@@ -64,28 +113,10 @@ impl Controller for Track {
         }
     }
 }
+
 impl Track {
     pub fn width(&self) -> usize { self.seq[self.row].len() }
     pub fn row(&mut self) -> &mut Vec<Field> { &mut self.seq[self.row] }
-}
-
-#[derive(Clone)]
-pub struct Field {
-    pub note: Note,
-    pub cmd: Command,
-}
-
-#[derive(Clone)]
-pub enum Note {
-    On(u8),
-    Off,
-    Hold,
-}
-
-#[derive(Clone)]
-pub struct Command {
-    pub id: u8,
-    pub data: u8,
 }
 
 impl Field {
@@ -130,26 +161,3 @@ impl Command {
     pub fn set_hi(&mut self, v: u8) { self.data = self.lo() + (v << 4) }
     pub fn set_lo(&mut self, v: u8) { self.data = (self.data & 0xf0) + (v & 0xf) }
 }
-//      '0' => {
-//          arp = match self.tick_count % 3 {
-//              0 => 0,
-//              1 => field.cmd.hi() as u16,
-//              2 => field.cmd.lo() as u16,
-//              _ => unreachable!(),
-//          };
-//      }
-//      '1' => chan.note += (field.cmd.data as u16)<<4,
-//      '2' => chan.note =
-//          match chan.note.checked_sub((field.cmd.data as u16)<<4) {
-//              Some(v) => v,
-//              None => 0,
-//          },
-//      'F' => {
-//          if field.cmd.data < 32 {
-//              self.tick_rate = field.cmd.data + 1
-//          } else {
-//              self.bpm = field.cmd.data
-//          }
-//      }
-//      'B' => self.ctrl.lock().unwrap().jump_pos(field.cmd.data),
-//      c @ _ => eprintln!("unknown command id: {}", c),

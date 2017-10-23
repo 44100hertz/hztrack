@@ -18,7 +18,7 @@ pub fn run() {
     let sdl = sdl2::init().unwrap();
     let track = Track::new(
         vec![vec![
-            Field{note: Note::On(80), cmd: Command::zero()}
+            Field{note: Note::On(80), cmd: Command::from_str("037")}
         ],vec![
             Field{note: Note::On(60), cmd: Command::zero()}
         ]]);

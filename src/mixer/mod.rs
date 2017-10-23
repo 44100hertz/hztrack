@@ -24,11 +24,18 @@ impl MixerIn {
 
 #[derive(Clone)]
 pub struct ChannelIn {
-    pub note:       u16,    // NNTT = 8bit note, 8bit tuning.
+    pub base_note:  u8,
+    pub note_off:   u16,    // NNTT = 8bit note, 8bit tuning.
     pub pcm_off:    usize,  // sample offset within data
     pub pcm_len:    u32,    // sample size
     pub pcm_rate:   u32,    // per-sample sampling rate
     pub vol:        i16,
+}
+impl ChannelIn {
+    pub fn set_note(&mut self, note: u8) {
+        self.base_note = note;
+        self.note_off = 0;
+    }
 }
 
 pub trait Controller {
