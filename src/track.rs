@@ -10,9 +10,24 @@ pub struct Track {
     tick_count: u8,
     bpm:        u8,
     tick_rate:  u8,
+
     row_jump:   Option<usize>,
+    effect:     Vec<Effect>,
+
     pcm:        Arc<Vec<i8>>,
     output:     MixerIn,
+}
+
+#[derive(Clone)]
+pub struct Effect {
+    base_note: u16,
+}
+impl Effect {
+    fn new() -> Self {
+        Effect {
+            base_note: 0,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -42,7 +57,10 @@ impl Track {
             tick_count: 0,
             bpm: 120,
             tick_rate: 6,
+
             row_jump: None,
+            effect: vec![],
+
             pcm: Arc::new((0..256)
                 .map(|i| ((i as f64 / 128.0 * 3.1415).sin() * 127.0) as i8)
                 .collect()),
@@ -54,16 +72,23 @@ impl Track {
 impl Controller for Track {
     fn next(&mut self) -> MixerIn {
         const DEFAULT_CHAN: ChannelIn = ChannelIn {
-            base_note:  60,
-            note_off:   0,
+            note:       60,
             pcm_off:    0,
             pcm_len:    256,
             pcm_rate:   256,
             vol:        0,
         };
 
-        self.output.chan.resize(self.seq[self.row].len(), DEFAULT_CHAN);
+        {
+            let w = self.width();
+            self.output.chan.resize(w, DEFAULT_CHAN);
+            self.effect.resize(w, Effect::new());
+        }
+        if self.tick_count > self.tick_rate {
+            self.beat();
+        }
         self.tick();
+        self.tick_count += 1;
         MixerIn {
             tick_rate: self.bpm as u16 * self.tick_rate as u16,
             pcm: self.pcm.clone(),
@@ -74,14 +99,9 @@ impl Controller for Track {
 
 impl Track {
     pub fn width(&self) -> usize { self.seq[self.row].len() }
-    pub fn row(&mut self) -> &mut Vec<Field> { &mut self.seq[self.row] }
     fn tick(&mut self) {
-        self.tick_count += 1;
         for i in 0..self.width() {
             self.channel_tick(i)
-        }
-        if self.tick_count > self.tick_rate {
-            self.beat();
         }
     }
     fn beat(&mut self) {
@@ -93,28 +113,35 @@ impl Track {
             self.channel_beat(i);
         }
     }
+    fn channel_beat(&mut self, i: usize) {
+        let chan = &mut self.output.chan[i];
+        match self.seq[self.row][i].note {
+            Note::On(n) => {
+                chan.note = (n as u16)<<8;
+                chan.vol = 64;
+            }
+            Note::Off => chan.vol = 0,
+            Note::Hold => {},
+        }
+        self.effect[i].base_note = chan.note;
+    }
     fn channel_tick(&mut self, i: usize) {
         let chan = &mut self.output.chan[i];
         let field = &self.seq[self.row][i];
         match field.cmd.id as char {
             '0' => {
-                chan.note_off = match self.tick_count % 3 {
-                    0 => 0,
-                    1 => (field.cmd.hi() as i16)<<8,
-                    2 => (field.cmd.lo() as i16)<<8,
-                    _ => unreachable!(),
-                }
+                chan.note = self.effect[i].base_note +
+                    match self.tick_count % 3 {
+                        0 => 0,
+                        1 => (field.cmd.hi() as u16)<<8,
+                        2 => (field.cmd.lo() as u16)<<8,
+                        _ => unreachable!(),
+                    };
             }
-            '1' => chan.note_off = match chan.note_off
-                .checked_add((field.cmd.data as i16)<<4) {
-                    Some(note) => note,
-                    None => i16::max_value(),
-            },
-            '2' => chan.note_off = match chan.note_off
-                .checked_sub((field.cmd.data as i16)<<4) {
-                    Some(note) => note,
-                    None => i16::min_value(),
-            },
+            '1' => chan.note = chan.note
+                .saturating_add((field.cmd.data as u16)<<4),
+            '2' => chan.note = chan.note
+                .saturating_sub((field.cmd.data as u16)<<4),
             'F' => {
                 if field.cmd.data < 32 {
                     self.tick_rate = field.cmd.data + 1
@@ -124,17 +151,6 @@ impl Track {
             }
             'B' => self.row_jump = Some(field.cmd.data as usize),
             c @ _ => eprintln!("unknown command id: {}", c),
-        }
-    }
-    fn channel_beat(&mut self, i: usize) {
-        let chan = &mut self.output.chan[i];
-        match self.seq[self.row][i].note {
-            Note::On(n) => {
-                chan.set_note(n);
-                chan.vol = 64;
-            }
-            Note::Off => chan.vol = 0,
-            Note::Hold => {},
         }
     }
 }

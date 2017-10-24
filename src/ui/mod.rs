@@ -18,13 +18,13 @@ pub fn run() {
     let sdl = sdl2::init().unwrap();
     let track = Track::new(
         vec![vec![
-            Field{note: Note::On(80), cmd: Command::from_str("000")}
+            Field{note: Note::On(80), cmd: Command::from_str("140")}
         ],vec![
-            Field{note: Note::Hold, cmd: Command::from_str("281")}
+            Field{note: Note::Hold, cmd: Command::from_str("011")}
         ]]);
     let ui = Ui{
         track: Arc::new(Mutex::new(track)),
     };
     let mixer = ::mixer::run(&sdl, ui);
-    ::std::thread::sleep(::std::time::Duration::from_secs(2));
+    ::std::thread::sleep(::std::time::Duration::from_secs(4));
 }
