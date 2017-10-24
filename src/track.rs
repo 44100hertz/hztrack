@@ -10,6 +10,7 @@ pub struct Track {
     tick_count: u8,
     bpm:        u8,
     tick_rate:  u8,
+    row_jump:   Option<usize>,
     pcm:        Arc<Vec<i8>>,
     output:     MixerIn,
 }
@@ -41,6 +42,7 @@ impl Track {
             tick_count: 0,
             bpm: 120,
             tick_rate: 6,
+            row_jump: None,
             pcm: Arc::new((0..256)
                 .map(|i| ((i as f64 / 128.0 * 3.1415).sin() * 127.0) as i8)
                 .collect()),
@@ -61,51 +63,7 @@ impl Controller for Track {
         };
 
         self.output.chan.resize(self.seq[self.row].len(), DEFAULT_CHAN);
-        for i in 0..self.width() {
-            let chan = &mut self.output.chan[i];
-            let field = &self.seq[self.row][i];
-            match field.note {
-                Note::On(n) => {
-                    chan.set_note(n);
-                    chan.vol = 64;
-                }
-                Note::Off => chan.vol = 0,
-                Note::Hold => {},
-            }
-            match field.cmd.id as char {
-                '0' => {
-                    chan.note_off = match self.tick_count % 3 {
-                        0 => 0,
-                        1 => (field.cmd.hi() as u16)<<8,
-                        2 => (field.cmd.lo() as u16)<<8,
-                        _ => unreachable!(),
-                    }
-                }
-//      '1' => chan.note += (field.cmd.data as u16)<<4,
-//      '2' => chan.note =
-//          match chan.note.checked_sub((field.cmd.data as u16)<<4) {
-//              Some(v) => v,
-//              None => 0,
-//          },
-//      'F' => {
-//          if field.cmd.data < 32 {
-//              self.tick_rate = field.cmd.data + 1
-//          } else {
-//              self.bpm = field.cmd.data
-//          }
-//      }
-//      'B' => self.ctrl.lock().unwrap().jump_pos(field.cmd.data),
-                c @ _ => eprintln!("unknown command id: {}", c),
-            }
-            // todo: handle field command
-        }
-
-        self.tick_count += 1;
-        if self.tick_count > self.tick_rate {
-            self.tick_count = 0;
-            self.row = (self.row + 1) % self.seq.len();
-        }
-
+        self.tick();
         MixerIn {
             tick_rate: self.bpm as u16 * self.tick_rate as u16,
             pcm: self.pcm.clone(),
@@ -117,6 +75,68 @@ impl Controller for Track {
 impl Track {
     pub fn width(&self) -> usize { self.seq[self.row].len() }
     pub fn row(&mut self) -> &mut Vec<Field> { &mut self.seq[self.row] }
+    fn tick(&mut self) {
+        self.tick_count += 1;
+        for i in 0..self.width() {
+            self.channel_tick(i)
+        }
+        if self.tick_count > self.tick_rate {
+            self.beat();
+        }
+    }
+    fn beat(&mut self) {
+        self.tick_count = 0;
+        self.row = self.row_jump.unwrap_or(
+            (self.row + 1) % self.seq.len());
+        self.row_jump = None;
+        for i in 0..self.width() {
+            self.channel_beat(i);
+        }
+    }
+    fn channel_tick(&mut self, i: usize) {
+        let chan = &mut self.output.chan[i];
+        let field = &self.seq[self.row][i];
+        match field.cmd.id as char {
+            '0' => {
+                chan.note_off = match self.tick_count % 3 {
+                    0 => 0,
+                    1 => (field.cmd.hi() as i16)<<8,
+                    2 => (field.cmd.lo() as i16)<<8,
+                    _ => unreachable!(),
+                }
+            }
+            '1' => chan.note_off = match chan.note_off
+                .checked_add((field.cmd.data as i16)<<4) {
+                    Some(note) => note,
+                    None => i16::max_value(),
+            },
+            '2' => chan.note_off = match chan.note_off
+                .checked_sub((field.cmd.data as i16)<<4) {
+                    Some(note) => note,
+                    None => i16::min_value(),
+            },
+            'F' => {
+                if field.cmd.data < 32 {
+                    self.tick_rate = field.cmd.data + 1
+                } else {
+                    self.bpm = field.cmd.data
+                }
+            }
+            'B' => self.row_jump = Some(field.cmd.data as usize),
+            c @ _ => eprintln!("unknown command id: {}", c),
+        }
+    }
+    fn channel_beat(&mut self, i: usize) {
+        let chan = &mut self.output.chan[i];
+        match self.seq[self.row][i].note {
+            Note::On(n) => {
+                chan.set_note(n);
+                chan.vol = 64;
+            }
+            Note::Off => chan.vol = 0,
+            Note::Hold => {},
+        }
+    }
 }
 
 impl Field {

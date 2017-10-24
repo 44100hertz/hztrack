@@ -25,7 +25,7 @@ impl MixerIn {
 #[derive(Clone)]
 pub struct ChannelIn {
     pub base_note:  u8,
-    pub note_off:   u16,    // NNTT = 8bit note, 8bit tuning.
+    pub note_off:   i16,    // NNTT = 8bit note, 8bit tuning.
     pub pcm_off:    usize,  // sample offset within data
     pub pcm_len:    u32,    // sample size
     pub pcm_rate:   u32,    // per-sample sampling rate

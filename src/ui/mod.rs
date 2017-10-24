@@ -18,9 +18,9 @@ pub fn run() {
     let sdl = sdl2::init().unwrap();
     let track = Track::new(
         vec![vec![
-            Field{note: Note::On(80), cmd: Command::from_str("037")}
+            Field{note: Note::On(80), cmd: Command::from_str("000")}
         ],vec![
-            Field{note: Note::On(60), cmd: Command::zero()}
+            Field{note: Note::Hold, cmd: Command::from_str("281")}
         ]]);
     let ui = Ui{
         track: Arc::new(Mutex::new(track)),

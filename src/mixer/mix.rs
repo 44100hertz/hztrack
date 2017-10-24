@@ -82,7 +82,7 @@ impl<C: Controller> Mixer<C> {
     }
     fn calc_phase_inc(&mut self, index: usize) {
         let inchan = &self.input.chan[index];
-        let exact_note = ((inchan.base_note as u16) << 8) + inchan.note_off;
+        let exact_note = ((inchan.base_note as i16) << 8) + inchan.note_off;
         let fnote = exact_note as f64 / 2f64.powi(8);
         let pitch = (2.0f64).powf((fnote - 60.0) / 12.0) * 440.0;
         self.chan[index].phase_inc =
