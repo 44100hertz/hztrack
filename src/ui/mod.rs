@@ -19,13 +19,13 @@ pub fn run() {
     let track = Track::new(
         vec![
         vec![
-            Field{note: Note::On(80), cmd: Command::zero()}
+            Field{note: Note::On(60), cmd: Command::zero()}
         ],
         vec![
-            Field{note: Note::On(60), cmd: Command::from_str("310")}
+            Field{note: Note::On(80), cmd: Command::from_str("310")}
         ],
         vec![
-            Field{note: Note::On(80), cmd: Command::from_str("300")}
+            Field{note: Note::Hold, cmd: Command::from_str("300")}
         ]]);
     let ui = Ui{
         track: Arc::new(Mutex::new(track)),

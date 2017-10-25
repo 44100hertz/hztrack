@@ -22,14 +22,14 @@ pub struct Track {
 pub struct Effect {
     base_note: u16,
     porta_note: u8,
-    last: Command,
+    cmd: Command,
 }
 impl Effect {
     fn new() -> Self {
         Effect {
             base_note: 0,
             porta_note: 0,
-            last: Command::zero(),
+            cmd: Command::zero(),
         }
     }
 }
@@ -129,41 +129,38 @@ impl Track {
             Note::Hold => {},
         }
         effect.base_note = chan.note;
+
+        // effect memory: if id is the same and command is 0,
+        // do not overwrite.
+        if field.cmd.data != 0 || field.cmd.id != effect.cmd.id {
+            effect.cmd.data = field.cmd.data;
+        }
+        effect.cmd.id = field.cmd.id;
     }
     fn channel_tick(&mut self, i: usize) {
-        let cmd = {
-            // so-called "effect memory"
-            let mut cmd = self.seq[self.row][i].cmd.clone();
-            let last = &mut self.effect[i].last;
-            if cmd.data == 0 && cmd.id == last.id {
-                cmd.data = last.data;
-            }
-            if cmd.id as char != '0' && cmd.data != 0 {
-                *last = cmd.clone();
-            }
-            cmd
-        };
-
         let chan = &mut self.output.chan[i];
+        let field = &self.seq[self.row][i];
         let effect = &mut self.effect[i];
-        match cmd.id as char {
+        match field.cmd.id as char {
             '0' => {
                 chan.note = effect.base_note +
+                    // arpeggio has no effect memory;
+                    // use the immediate command data.
                     match self.tick_count % 3 {
                         0 => 0,
-                        1 => (cmd.hi() as u16)<<8,
-                        2 => (cmd.lo() as u16)<<8,
+                        1 => (field.cmd.hi() as u16)<<8,
+                        2 => (field.cmd.lo() as u16)<<8,
                         _ => unreachable!(),
                     };
             }
             '1' => chan.note = chan.note
-                .saturating_add((cmd.data as u16)<<4),
+                .saturating_add((effect.cmd.data as u16)<<4),
             '2' => chan.note = chan.note
-                .saturating_sub((cmd.data as u16)<<4),
+                .saturating_sub((effect.cmd.data as u16)<<4),
             '3' => {
                 use std::cmp::*;
                 let pn = (effect.porta_note as u16)<<8;
-                let rate = (cmd.data as u16)<<4;
+                let rate = (effect.cmd.data as u16)<<4;
                 if chan.note < pn {
                     chan.note = min(chan.note + rate, pn);
                 } else if chan.note > pn {
@@ -171,13 +168,13 @@ impl Track {
                 }
             }
             'F' => {
-                if cmd.data < 32 {
-                    self.tick_rate = cmd.data + 1
+                if effect.cmd.data < 32 {
+                    self.tick_rate = effect.cmd.data + 1
                 } else {
-                    self.bpm = cmd.data
+                    self.bpm = effect.cmd.data
                 }
             }
-            'B' => self.row_jump = Some(cmd.data as usize),
+            'B' => self.row_jump = Some(effect.cmd.data as usize),
             c @ _ => eprintln!("unknown command id: {}", c),
         }
     }
