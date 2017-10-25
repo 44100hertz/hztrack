@@ -21,11 +21,15 @@ pub struct Track {
 #[derive(Clone)]
 pub struct Effect {
     base_note: u16,
+    porta_note: u8,
+    last: Command,
 }
 impl Effect {
     fn new() -> Self {
         Effect {
             base_note: 0,
+            porta_note: 0,
+            last: Command::zero(),
         }
     }
 }
@@ -71,23 +75,32 @@ impl Track {
 
 impl Controller for Track {
     fn next(&mut self) -> MixerIn {
-        const DEFAULT_CHAN: ChannelIn = ChannelIn {
-            note:       60,
-            pcm_off:    0,
-            pcm_len:    256,
-            pcm_rate:   256,
-            vol:        0,
-        };
-
         {
+            const DEFAULT: ChannelIn = ChannelIn {
+                note:       60,
+                pcm_off:    0,
+                pcm_len:    256,
+                pcm_rate:   256,
+                vol:        0,
+            };
             let w = self.width();
-            self.output.chan.resize(w, DEFAULT_CHAN);
+            self.output.chan.resize(w, DEFAULT);
             self.effect.resize(w, Effect::new());
         }
-        if self.tick_count > self.tick_rate {
-            self.beat();
+        if self.tick_count == self.tick_rate {
+            self.tick_count = 0;
+            self.row = self.row_jump.unwrap_or(
+                (self.row + 1) % self.seq.len());
+            self.row_jump = None;
         }
-        self.tick();
+        if self.tick_count == 0 {
+            for i in 0..self.width() {
+                self.channel_beat(i);
+            }
+        }
+        for i in 0..self.width() {
+            self.channel_tick(i)
+        }
         self.tick_count += 1;
         MixerIn {
             tick_rate: self.bpm as u16 * self.tick_rate as u16,
@@ -99,57 +112,72 @@ impl Controller for Track {
 
 impl Track {
     pub fn width(&self) -> usize { self.seq[self.row].len() }
-    fn tick(&mut self) {
-        for i in 0..self.width() {
-            self.channel_tick(i)
-        }
-    }
-    fn beat(&mut self) {
-        self.tick_count = 0;
-        self.row = self.row_jump.unwrap_or(
-            (self.row + 1) % self.seq.len());
-        self.row_jump = None;
-        for i in 0..self.width() {
-            self.channel_beat(i);
-        }
-    }
     fn channel_beat(&mut self, i: usize) {
         let chan = &mut self.output.chan[i];
-        match self.seq[self.row][i].note {
+        let field = &self.seq[self.row][i];
+        let effect = &mut self.effect[i];
+        match field.note {
             Note::On(n) => {
-                chan.note = (n as u16)<<8;
+                if field.cmd.id as char == '3' {
+                    effect.porta_note = n;
+                } else {
+                    chan.note = (n as u16)<<8;
+                }
                 chan.vol = 64;
             }
             Note::Off => chan.vol = 0,
             Note::Hold => {},
         }
-        self.effect[i].base_note = chan.note;
+        effect.base_note = chan.note;
     }
     fn channel_tick(&mut self, i: usize) {
+        let cmd = {
+            // so-called "effect memory"
+            let mut cmd = self.seq[self.row][i].cmd.clone();
+            let last = &mut self.effect[i].last;
+            if cmd.data == 0 && cmd.id == last.id {
+                cmd.data = last.data;
+            }
+            if cmd.id as char != '0' && cmd.data != 0 {
+                *last = cmd.clone();
+            }
+            cmd
+        };
+
         let chan = &mut self.output.chan[i];
-        let field = &self.seq[self.row][i];
-        match field.cmd.id as char {
+        let effect = &mut self.effect[i];
+        match cmd.id as char {
             '0' => {
-                chan.note = self.effect[i].base_note +
+                chan.note = effect.base_note +
                     match self.tick_count % 3 {
                         0 => 0,
-                        1 => (field.cmd.hi() as u16)<<8,
-                        2 => (field.cmd.lo() as u16)<<8,
+                        1 => (cmd.hi() as u16)<<8,
+                        2 => (cmd.lo() as u16)<<8,
                         _ => unreachable!(),
                     };
             }
             '1' => chan.note = chan.note
-                .saturating_add((field.cmd.data as u16)<<4),
+                .saturating_add((cmd.data as u16)<<4),
             '2' => chan.note = chan.note
-                .saturating_sub((field.cmd.data as u16)<<4),
-            'F' => {
-                if field.cmd.data < 32 {
-                    self.tick_rate = field.cmd.data + 1
-                } else {
-                    self.bpm = field.cmd.data
+                .saturating_sub((cmd.data as u16)<<4),
+            '3' => {
+                use std::cmp::*;
+                let pn = (effect.porta_note as u16)<<8;
+                let rate = (cmd.data as u16)<<4;
+                if chan.note < pn {
+                    chan.note = min(chan.note + rate, pn);
+                } else if chan.note > pn {
+                    chan.note = max(chan.note - rate, pn);
                 }
             }
-            'B' => self.row_jump = Some(field.cmd.data as usize),
+            'F' => {
+                if cmd.data < 32 {
+                    self.tick_rate = cmd.data + 1
+                } else {
+                    self.bpm = cmd.data
+                }
+            }
+            'B' => self.row_jump = Some(cmd.data as usize),
             c @ _ => eprintln!("unknown command id: {}", c),
         }
     }

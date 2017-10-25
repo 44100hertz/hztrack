@@ -17,10 +17,15 @@ impl Controller for Ui {
 pub fn run() {
     let sdl = sdl2::init().unwrap();
     let track = Track::new(
-        vec![vec![
-            Field{note: Note::On(80), cmd: Command::from_str("140")}
-        ],vec![
-            Field{note: Note::Hold, cmd: Command::from_str("011")}
+        vec![
+        vec![
+            Field{note: Note::On(80), cmd: Command::zero()}
+        ],
+        vec![
+            Field{note: Note::On(60), cmd: Command::from_str("310")}
+        ],
+        vec![
+            Field{note: Note::On(80), cmd: Command::from_str("300")}
         ]]);
     let ui = Ui{
         track: Arc::new(Mutex::new(track)),
