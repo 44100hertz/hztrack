@@ -5,6 +5,7 @@ use std::sync::{Mutex, Arc};
 use mixer::*;
 use track::*;
 
+#[derive(Clone)]
 struct Ui {
     track: Arc<Mutex<Track>>,
 }
@@ -30,6 +31,21 @@ pub fn run() {
     let ui = Ui{
         track: Arc::new(Mutex::new(track)),
     };
-    let mixer = ::mixer::run(&sdl, ui);
-    ::std::thread::sleep(::std::time::Duration::from_secs(4));
+    let video_subsys = sdl.video().unwrap();
+    let win = video_subsys.window("rusttracker", 800, 600)
+        .position_centered()
+        .opengl()
+        .resizable()
+        .build().unwrap();
+    let _mixer = ::mixer::run(&sdl, ui.clone());
+    let mut event_pump = sdl.event_pump().unwrap();
+    'main: loop {
+        use sdl2::event::Event;
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit{..}  => break 'main,
+                _ => {},
+            }
+        }
+    }
 }

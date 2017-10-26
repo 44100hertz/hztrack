@@ -5,7 +5,7 @@ use mixer::*;
 use base32;
 
 pub struct Track {
-    seq:        Vec<Vec<Field>>,
+    pub seq:    Vec<Vec<Field>>,
     row:        usize,
     tick_count: u8,
     bpm:        u8,
