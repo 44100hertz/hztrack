@@ -32,7 +32,7 @@ pub fn run() {
         track: Arc::new(Mutex::new(track)),
     };
     let video_subsys = sdl.video().unwrap();
-    let win = video_subsys.window("rusttracker", 800, 600)
+    let _win = video_subsys.window("rusttracker", 800, 600)
         .position_centered()
         .opengl()
         .resizable()

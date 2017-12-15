@@ -24,15 +24,6 @@ pub struct Effect {
     porta_note: u8,
     cmd: Command,
 }
-impl Effect {
-    fn new() -> Self {
-        Effect {
-            base_note: 0,
-            porta_note: 0,
-            cmd: Command::zero(),
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct Field {
@@ -53,6 +44,15 @@ pub struct Command {
     pub data:   u8,
 }
 
+impl Effect {
+    fn new() -> Self {
+        Effect {
+            base_note: 0,
+            porta_note: 0,
+            cmd: Command::zero(),
+        }
+    }
+}
 impl Track {
     pub fn new(seq: Vec<Vec<Field>>) -> Self {
         Track {
@@ -71,46 +71,6 @@ impl Track {
             output: MixerIn::new(),
         }
     }
-}
-
-impl Controller for Track {
-    fn next(&mut self) -> MixerIn {
-        {
-            const DEFAULT: ChannelIn = ChannelIn {
-                note:       60,
-                pcm_off:    0,
-                pcm_len:    256,
-                pcm_rate:   256,
-                vol:        0,
-            };
-            let w = self.width();
-            self.output.chan.resize(w, DEFAULT);
-            self.effect.resize(w, Effect::new());
-        }
-        if self.tick_count == self.tick_rate {
-            self.tick_count = 0;
-            self.row = self.row_jump.unwrap_or(
-                (self.row + 1) % self.seq.len());
-            self.row_jump = None;
-        }
-        if self.tick_count == 0 {
-            for i in 0..self.width() {
-                self.channel_beat(i);
-            }
-        }
-        for i in 0..self.width() {
-            self.channel_tick(i)
-        }
-        self.tick_count += 1;
-        MixerIn {
-            tick_rate: self.bpm as u16 * self.tick_rate as u16,
-            pcm: self.pcm.clone(),
-            chan: self.output.chan.clone(),
-        }
-    }
-}
-
-impl Track {
     pub fn width(&self) -> usize { self.seq[self.row].len() }
     fn channel_beat(&mut self, i: usize) {
         let chan = &mut self.output.chan[i];
@@ -180,22 +140,56 @@ impl Track {
     }
 }
 
+impl Controller for Track {
+    fn next(&mut self) -> MixerIn {
+        {
+            const DEFAULT: ChannelIn = ChannelIn {
+                note:       60,
+                pcm_off:    0,
+                pcm_len:    256,
+                pcm_rate:   256,
+                vol:        0,
+            };
+            let w = self.width();
+            self.output.chan.resize(w, DEFAULT);
+            self.effect.resize(w, Effect::new());
+        }
+        if self.tick_count == self.tick_rate {
+            self.tick_count = 0;
+            self.row = self.row_jump.unwrap_or(
+                (self.row + 1) % self.seq.len());
+            self.row_jump = None;
+        }
+        if self.tick_count == 0 {
+            for i in 0..self.width() {
+                self.channel_beat(i);
+            }
+        }
+        for i in 0..self.width() {
+            self.channel_tick(i)
+        }
+        self.tick_count += 1;
+        MixerIn {
+            tick_rate: self.bpm as u16 * self.tick_rate as u16,
+            pcm: self.pcm.clone(),
+            chan: self.output.chan.clone(),
+        }
+    }
+}
+
 impl Field {
     pub fn string(&self) -> String {
-        let mut out = String::new();
-        match self.note {
+        let note = match self.note {
             Note::On(ref note) => {
                 const NOTE_NAME: &'static str = "C-C#D-D#E-F-F#G-G#A-A#B-";
                 let name = *note as usize % 12;
-                out.push_str(&NOTE_NAME[name*2..name*2+2]);
                 let octave = note / 12;
-                out.push_str(&format!("{}", octave));
+                format!("{}{}", &NOTE_NAME[name*2..name*2+2], octave)
             }
-            Note::Off => out.push_str("---"),
-            Note::Hold => out.push_str("   "),
-        }
-        out.push_str(&format!("{}{:02X}", self.cmd.id as char, self.cmd.data));
-        out
+            Note::Off => format!("---"),
+            Note::Hold => format!("   "),
+        };
+        format!("{}{}{:02X}", note, self.cmd.id as char, self.cmd.data)
     }
 }
 
