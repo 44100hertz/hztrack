@@ -68,7 +68,9 @@ impl Track {
                 .collect()),
         }
     }
-    pub fn width(&self) -> usize { self.seq[self.row].len() }
+    pub fn width(&self) -> usize {
+        self.seq[self.row].len()
+    }
     fn channel_beat(&mut self, i: usize) {
         let field = &self.seq[self.row][i];
         let chan = &mut self.chan[i];
@@ -111,24 +113,27 @@ impl Track {
             b'2' => chan.note = chan.note
                 .saturating_sub((chan.cmd.data as u16)<<4),
             b'3' => {
-                use std::cmp::*;
-                let pn = (chan.porta_note as u16)<<8;
+                let moveto = |a: u16, b, rate| {
+                    use std::cmp::*;
+                    use std::cmp::Ordering::*;
+                    match a.cmp(&b) {
+                        Less => min(a+rate, b),
+                        Equal => a,
+                        Greater => max(a-rate, b),
+                    }};
+                let porta_note = (chan.porta_note as u16)<<8;
                 let rate = (chan.cmd.data as u16)<<4;
-                if chan.note < pn {
-                    chan.note = min(chan.note + rate, pn);
-                } else if chan.note > pn {
-                    chan.note = max(chan.note - rate, pn);
-                }
+                chan.note = moveto(chan.note, porta_note, rate);
             }
             b'F' => {
-                if chan.cmd.data < 32 {
-                    self.tick_rate = chan.cmd.data + 1
-                } else {
-                    self.bpm = chan.cmd.data
+                match chan.cmd.data {
+                    0...31 => self.tick_rate = chan.cmd.data + 1,
+                    32...255 => self.bpm = chan.cmd.data,
+                    _ => unreachable!(),
                 }
             }
             b'B' => self.row_jump = Some(chan.cmd.data as usize),
-            c @ _ => eprintln!("unknown command id: {}", c as char),
+            c @ _ => panic!("unknown command id: {}", c as char),
         }
     }
 }
