@@ -204,7 +204,7 @@ impl Command {
     pub fn from_str(raw: &str) -> Command {
         let mut chars = raw.chars();
         Command {
-            id: base32::from_char(chars.next().unwrap()),
+            id: base32::from_char(chars.next().unwrap()).unwrap(),
             data: u8::from_str_radix(chars.as_str(), 16).unwrap(),
         }
     }
