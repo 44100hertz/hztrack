@@ -1,28 +1,18 @@
 use std::sync::Arc;
 
-use mixer::*;
+use mixer::{Controller, MixerIn, ChannelIn};
 
 use base32;
 
 pub struct Track {
     pub seq:    Vec<Vec<Field>>,
+    chan:       Vec<Channel>,
+    row_jump:   Option<usize>,
     row:        usize,
     tick_count: u8,
-    bpm:        u8,
     tick_rate:  u8,
-
-    row_jump:   Option<usize>,
-    effect:     Vec<Effect>,
-
+    bpm:        u8,
     pcm:        Arc<Vec<i8>>,
-    output:     MixerIn,
-}
-
-#[derive(Clone)]
-pub struct Effect {
-    base_note: u16,
-    porta_note: u8,
-    cmd: Command,
 }
 
 #[derive(Clone)]
@@ -43,13 +33,23 @@ pub struct Command {
     pub id:     u8,
     pub data:   u8,
 }
+#[derive(Clone)]
+pub struct Channel {
+    note:  u16,
+    add_note:   u16,
+    porta_note: u8,
+    cmd:        Command,
+    vol:        i16,
+}
 
-impl Effect {
+impl Channel {
     fn new() -> Self {
-        Effect {
-            base_note: 0,
+        Channel {
+            note: 0,
+            add_note: 0,
             porta_note: 0,
             cmd: Command::zero(),
+            vol: 0,
         }
     }
 }
@@ -57,53 +57,46 @@ impl Track {
     pub fn new(seq: Vec<Vec<Field>>) -> Self {
         Track {
             seq: seq,
+            chan: vec![],
             row: 0,
-            tick_count: 0,
-            bpm: 120,
-            tick_rate: 6,
-
             row_jump: None,
-            effect: vec![],
-
+            tick_count: 0,
+            tick_rate: 6,
+            bpm: 120,
             pcm: Arc::new((0..256)
                 .map(|i| ((i as f64 / 128.0 * 3.1415).sin() * 127.0) as i8)
                 .collect()),
-            output: MixerIn::new(),
         }
     }
     pub fn width(&self) -> usize { self.seq[self.row].len() }
     fn channel_beat(&mut self, i: usize) {
-        let chan = &mut self.output.chan[i];
         let field = &self.seq[self.row][i];
-        let effect = &mut self.effect[i];
+        let chan = &mut self.chan[i];
         match field.note {
             Note::On(n) => {
-                if field.cmd.id as char == '3' {
-                    effect.porta_note = n;
-                } else {
-                    chan.note = (n as u16)<<8;
+                match field.cmd.id {
+                    b'3' => chan.porta_note = n,
+                    _ => chan.note = (n as u16)<<8,
                 }
-                chan.vol = 64;
+                chan.vol = 0x40;
             }
             Note::Off => chan.vol = 0,
             Note::Hold => {},
         }
-        effect.base_note = chan.note;
 
-        // effect memory: if id is the same and command is 0,
-        // do not overwrite.
-        if field.cmd.data != 0 || field.cmd.id != effect.cmd.id {
-            effect.cmd.data = field.cmd.data;
+        // effect memory: Only overwrite command data on a new id,
+        // or on nonzero data.
+        if field.cmd.data != 0 || field.cmd.id != chan.cmd.id {
+            chan.cmd.data = field.cmd.data;
         }
-        effect.cmd.id = field.cmd.id;
+        chan.cmd.id = field.cmd.id;
     }
     fn channel_tick(&mut self, i: usize) {
-        let chan = &mut self.output.chan[i];
+        let chan = &mut self.chan[i];
         let field = &self.seq[self.row][i];
-        let effect = &mut self.effect[i];
-        match field.cmd.id as char {
-            '0' => {
-                chan.note = effect.base_note +
+        match field.cmd.id {
+            b'0' => {
+                chan.add_note =
                     // arpeggio has no effect memory;
                     // use the immediate command data.
                     match self.tick_count % 3 {
@@ -113,29 +106,29 @@ impl Track {
                         _ => unreachable!(),
                     };
             }
-            '1' => chan.note = chan.note
-                .saturating_add((effect.cmd.data as u16)<<4),
-            '2' => chan.note = chan.note
-                .saturating_sub((effect.cmd.data as u16)<<4),
-            '3' => {
+            b'1' => chan.note = chan.note
+                .saturating_add((chan.cmd.data as u16)<<4),
+            b'2' => chan.note = chan.note
+                .saturating_sub((chan.cmd.data as u16)<<4),
+            b'3' => {
                 use std::cmp::*;
-                let pn = (effect.porta_note as u16)<<8;
-                let rate = (effect.cmd.data as u16)<<4;
+                let pn = (chan.porta_note as u16)<<8;
+                let rate = (chan.cmd.data as u16)<<4;
                 if chan.note < pn {
                     chan.note = min(chan.note + rate, pn);
                 } else if chan.note > pn {
                     chan.note = max(chan.note - rate, pn);
                 }
             }
-            'F' => {
-                if effect.cmd.data < 32 {
-                    self.tick_rate = effect.cmd.data + 1
+            b'F' => {
+                if chan.cmd.data < 32 {
+                    self.tick_rate = chan.cmd.data + 1
                 } else {
-                    self.bpm = effect.cmd.data
+                    self.bpm = chan.cmd.data
                 }
             }
-            'B' => self.row_jump = Some(effect.cmd.data as usize),
-            c @ _ => eprintln!("unknown command id: {}", c),
+            b'B' => self.row_jump = Some(chan.cmd.data as usize),
+            c @ _ => eprintln!("unknown command id: {}", c as char),
         }
     }
 }
@@ -143,16 +136,8 @@ impl Track {
 impl Controller for Track {
     fn next(&mut self) -> MixerIn {
         {
-            const DEFAULT: ChannelIn = ChannelIn {
-                note:       60,
-                pcm_off:    0,
-                pcm_len:    256,
-                pcm_rate:   256,
-                vol:        0,
-            };
             let w = self.width();
-            self.output.chan.resize(w, DEFAULT);
-            self.effect.resize(w, Effect::new());
+            self.chan.resize(w, Channel::new());
         }
         if self.tick_count == self.tick_rate {
             self.tick_count = 0;
@@ -172,7 +157,14 @@ impl Controller for Track {
         MixerIn {
             tick_rate: self.bpm as u16 * self.tick_rate as u16,
             pcm: self.pcm.clone(),
-            chan: self.output.chan.clone(),
+            chan: self.chan.iter().map(|c|
+                ChannelIn{
+                    note: c.note + c.add_note,
+                    pcm_off: 0,
+                    pcm_len: 256,
+                    pcm_rate: 256,
+                    vol: c.vol,
+                }).collect(),
         }
     }
 }
@@ -186,8 +178,8 @@ impl Field {
                 let octave = note / 12;
                 format!("{}{}", &NOTE_NAME[name*2..name*2+2], octave)
             }
-            Note::Off => format!("---"),
-            Note::Hold => format!("   "),
+            Note::Off => String::from("---"),
+            Note::Hold => String::from("   "),
         };
         format!("{}{}{:02X}", note, self.cmd.id as char, self.cmd.data)
     }
