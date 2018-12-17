@@ -1,6 +1,6 @@
 use sdl2::keyboard::Scancode;
 
-use mixer::control::*;
+use track::Note;
 
 pub fn to_hex(sc: Scancode) -> Option<u8> {
     match sc {
