@@ -3,8 +3,9 @@ use sdl2;
 mod keyboard;
 
 use std::sync::{Mutex, Arc};
-use mixer::*;
-use track::*;
+use sequence::{Field, Note, Command};
+use track::Track;
+use mixer::{Controller, MixerIn};
 
 #[derive(Clone)]
 struct Ui {
@@ -43,9 +44,9 @@ pub fn run() {
                 Event::KeyDown{scancode, ..} => {
                     // HACK: play note, bring into audible octave
                     let mut track = ui.track.lock().unwrap();
-                    track.seq[0][0].note = keyboard::to_note(scancode.unwrap());
-                    if let Note::On(n) = track.seq[0][0].note {
-                        track.seq[0][0].note = Note::On(n+48);
+                    track.seq.fields[0][0].note = keyboard::to_note(scancode.unwrap());
+                    if let Note::On(n) = track.seq.fields[0][0].note {
+                        track.seq.fields[0][0].note = Note::On(n+48);
                     }
                 }
                 _ => {},

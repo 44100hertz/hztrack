@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use mixer::*;
 use std::num::Wrapping;
 
@@ -56,8 +54,8 @@ impl<C: Controller> Mixer<C> {
         if self.samp_count == self.next_tick {
             for (chan, inchan) in self.chan.iter_mut().zip(&mut self.input.chan) {
                 let pbitsf = (1<<PBITS) as f64;
-                let fnote = inchan.note as f64 / 2f64.powi(8);
-                let pitch = (2.0f64).powf((fnote - 60.0) / 12.0) * 440.0;
+                let fnote = inchan.note as f64 / 2_f64.powi(8);
+                let pitch = (2_f64).powf((fnote - 60.0) / 12.0) * 440.0;
                 chan.phase_inc =
                     (pitch * pbitsf * inchan.pcm_rate as f64) as u32 / self.srate;
             }
