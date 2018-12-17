@@ -2,7 +2,7 @@ pub fn from_char(w: char) -> Result<u8, &'static str> {
     if w as u32 > 127 {
         return Err("character out of base32 range.");
     }
-    match BASE32[w as usize & 127] {
+    match BASE32[w as usize] {
         0 => Err("character not found in conversion table."),
         c => Ok(c),
     }

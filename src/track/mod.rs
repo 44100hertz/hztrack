@@ -91,17 +91,16 @@ impl Track {
             b'2' => chan.note = chan.note
                 .saturating_sub((chan.cmd.data as u16)<<4),
             b'3' => {
-                let moveto = |a: u16, b, rate| {
-                    use std::cmp::*;
-                    use std::cmp::Ordering::*;
-                    match a.cmp(&b) {
-                        Less => min(a+rate, b),
-                        Equal => a,
-                        Greater => max(a-rate, b),
-                    }};
                 let porta_note = (chan.porta_note as u16)<<8;
                 let rate = (chan.cmd.data as u16)<<4;
-                chan.note = moveto(chan.note, porta_note, rate);
+                let diff = chan.note - porta_note;
+                if diff.abs() < rate {
+                    chan.note = porta_note;
+                } else if diff > 0 {
+                    chan.note -= rate;
+                } else {
+                    chan.note += rate;
+                }
             }
             b'F' => {
                 match chan.cmd.data {
